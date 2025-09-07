@@ -44,15 +44,13 @@
 <div class="footer">Made by Lonloy</div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-  // Obfuscated access code
-  const correctCode = atob("ODAxN2xvbmxveWlzY29vbA=="); // "8017lonloyiscool"
+  const correctCode = "8017lonloyiscool"; // hidden logic
   const input = document.getElementById('accessCode');
   const button = document.getElementById('enterBtn');
 
   function checkCode() {
     if(input.value === correctCode){
-      window.location.href = "raven.html"; // redirect to next page
+      window.location.href = "raven.html"; // redirect to map page
     } else {
       alert("Incorrect code!");
       input.value = "";
@@ -60,10 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   button.addEventListener('click', checkCode);
-  input.addEventListener('keypress', e => {
-    if(e.key === 'Enter') checkCode();
-  });
-});
+  input.addEventListener('keypress', e => { if(e.key === 'Enter') checkCode(); });
 </script>
 </body>
 </html>
