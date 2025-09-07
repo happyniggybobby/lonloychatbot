@@ -1,46 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Raven | Lonloy Chat Bot</title>
-  <style>
-    body {
-      margin: 0;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background-color: black;
-      color: white;
-      font-family: Arial, sans-serif;
-    }
-    .box {
-      background-color: #111;
-      padding: 20px;
-      border-radius: 8px;
-      text-align: center;
-    }
-    .cords {
-      margin-top: 10px;
-      padding: 10px;
-      background-color: green;
-      color: white;
-      display: inline-block;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raven | Lonloy Chat Bot</title>
+<style>
+  body {
+    margin: 0;
+    height: 100vh;
+    background-color: black;
+    color: white;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+  }
+
+  .map-container {
+    display: grid;
+    grid-template-columns: repeat(5, 60px);
+    grid-template-rows: repeat(5, 60px);
+    gap: 5px;
+  }
+
+  .map-cell {
+    background-color: #111;
+    border: 1px solid #444;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .map-cell:hover {
+    background-color: green;
+    color: black;
+    font-weight: bold;
+  }
+
+  .footer {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    font-size: 12px;
+    color: white;
+  }
+</style>
 </head>
 <body>
-  <div class="box">
-    <h2>Raven</h2>
-    <div class="cords">A1</div>
-    <div class="cords">B2</div>
-    <div class="cords">C3</div>
-    <div class="cords">D4</div>
-    <div class="cords">E5</div>
-  </div>
-  <div class="footer" style="position: fixed; bottom: 10px; right: 10px; font-size: 12px;">Made by Lonloy</div>
+
+<h2>Raven Map</h2>
+<div class="map-container" id="mapContainer">
+  <!-- Cells will be added by JS -->
+</div>
+
+<div class="footer">Made by Lonloy</div>
+
+<script>
+  const container = document.getElementById('mapContainer');
+
+  // Letters for rows
+  const rows = ['A','B','C','D','E'];
+
+  // Numbers for columns
+  const cols = [1,2,3,4,5];
+
+  // Create the grid
+  rows.forEach(r => {
+    cols.forEach(c => {
+      const cell = document.createElement('div');
+      cell.className = 'map-cell';
+      cell.textContent = r + c; // Example: A1, B3, etc.
+      cell.addEventListener('click', () => {
+        alert('You clicked cell ' + r + c);
+        // Here you can add actions for each coordinate
+      });
+      container.appendChild(cell);
+    });
+  });
+</script>
+
 </body>
 </html>
