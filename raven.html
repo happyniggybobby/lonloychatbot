@@ -7,18 +7,18 @@
 <style>
   body {
     margin: 0;
-    background-color: black;
-    font-family: Arial, sans-serif;
-    color: white;
+    height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    background-color: black;
+    font-family: Arial, sans-serif;
+    color: white;
   }
   #grid {
     display: grid;
-    grid-template-columns: repeat(6, 60px);
-    grid-template-rows: repeat(6, 60px);
+    grid-template-columns: repeat(5, 60px);
+    grid-template-rows: repeat(5, 60px);
     gap: 2px;
   }
   .cell {
@@ -28,58 +28,71 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    color: white;
     font-weight: bold;
+    color: white;
   }
-  .header {
-    background: black;
-    color: white;
-    font-weight: bold;
+  .label-x {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    width: 310px;
+  }
+  .label-y {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 310px;
+    margin-right: 5px;
   }
 </style>
 </head>
 <body>
-<div id="grid"></div>
+<div>
+  <div class="label-x">
+    <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div>
+  </div>
+  <div style="display:flex;">
+    <div class="label-y">
+      <div>A</div><div>B</div><div>C</div><div>D</div><div>E</div>
+    </div>
+    <div id="grid">
+      <div class="cell" id="A1"></div><div class="cell" id="A2"></div><div class="cell" id="A3"></div><div class="cell" id="A4"></div><div class="cell" id="A5"></div>
+      <div class="cell" id="B1"></div><div class="cell" id="B2"></div><div class="cell" id="B3"></div><div class="cell" id="B4"></div><div class="cell" id="B5"></div>
+      <div class="cell" id="C1"></div><div class="cell" id="C2"></div><div class="cell" id="C3"></div><div class="cell" id="C4"></div><div class="cell" id="C5"></div>
+      <div class="cell" id="D1"></div><div class="cell" id="D2"></div><div class="cell" id="D3"></div><div class="cell" id="D4"></div><div class="cell" id="D5"></div>
+      <div class="cell" id="E1"></div><div class="cell" id="E2"></div><div class="cell" id="E3"></div><div class="cell" id="E4"></div><div class="cell" id="E5"></div>
+    </div>
+  </div>
+</div>
 
 <script>
-  const gridEl = document.getElementById('grid');
-  const rows = ['A','B','C','D','E'];
-  const cols = [1,2,3,4,5];
-  const cells = {};
+const DOT_DURATION = 5000;
+const cells = {};
 
-  // Build grid with headers
-  gridEl.innerHTML = '';
-  gridEl.appendChild(document.createElement('div')); // top-left empty cell
-  cols.forEach(c => {
-    const div = document.createElement('div');
-    div.className = 'cell header';
-    div.textContent = c;
-    gridEl.appendChild(div);
-  });
-  rows.forEach(r => {
-    const rowDiv = document.createElement('div');
-    // row header
-    const div = document.createElement('div');
-    div.className = 'cell header';
-    div.textContent = r;
-    gridEl.appendChild(div);
-    cols.forEach(c => {
-      const cell = document.createElement('div');
-      cell.className = 'cell';
-      gridEl.appendChild(cell);
-      cells[`${r}${c}`] = cell;
-    });
-  });
+['A','B','C','D','E'].forEach(row=>{
+  for(let col=1;col<=5;col++){
+    const id = row+col;
+    cells[id] = document.getElementById(id);
+  }
+});
 
-  // Listen for messages from Drednot.io
-  window.addEventListener('message', e => {
-    const data = e.data;
-    if(!data || !data.row || !data.col || !data.color) return;
-    const key = `${data.row}${data.col}`;
-    if(cells[key]) cells[key].style.backgroundColor = data.color;
-  });
+function updateCell(row, col, color){
+  const cell = cells[row+col];
+  if(!cell) return;
+  cell.style.backgroundColor = color;
+  if(color!=='grey'){
+    setTimeout(()=>{ cell.style.backgroundColor='grey'; }, DOT_DURATION);
+  }
+}
+
+window.addMinimapDot = (row, col, color='red') => {
+  const rowLetter = ['A','B','C','D','E'][Math.floor(row)];
+  const colNumber = Math.floor(col)+1;
+  updateCell(rowLetter, colNumber, color);
+};
 </script>
 </body>
 </html>
+
 
 
