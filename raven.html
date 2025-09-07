@@ -3,42 +3,51 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Raven | Lonloy Chat Bot</title>
+<title>Raven Map</title>
 <style>
   body {
     margin: 0;
     height: 100vh;
-    background-color: black;
-    color: white;
-    font-family: Arial, sans-serif;
     display: flex;
     justify-content: center;
     align-items: center;
-    flex-direction: column;
+    background-color: black;
+    font-family: Arial, sans-serif;
+    color: white;
   }
 
   .map-container {
     display: grid;
     grid-template-columns: repeat(5, 60px);
     grid-template-rows: repeat(5, 60px);
-    gap: 5px;
+    gap: 4px;
+    background-color: #111;
+    padding: 10px;
+    border: 2px solid white;
   }
 
-  .map-cell {
-    background-color: #111;
-    border: 1px solid #444;
+  .cell {
     display: flex;
     justify-content: center;
     align-items: center;
-    color: white;
+    background-color: #222;
+    border: 1px solid #555;
     cursor: pointer;
-    transition: all 0.2s;
+    font-size: 14px;
+    color: white;
+    user-select: none;
   }
 
-  .map-cell:hover {
+  .cell.green {
     background-color: green;
-    color: black;
-    font-weight: bold;
+  }
+
+  .cell.red {
+    background-color: red;
+  }
+
+  .cell:hover {
+    opacity: 0.7;
   }
 
   .footer {
@@ -46,42 +55,39 @@
     bottom: 10px;
     right: 10px;
     font-size: 12px;
-    color: white;
   }
 </style>
 </head>
 <body>
-
-<h2>Raven Map</h2>
-<div class="map-container" id="mapContainer">
-  <!-- Cells will be added by JS -->
-</div>
-
+<div class="map-container" id="map"></div>
 <div class="footer">Made by Lonloy</div>
 
 <script>
-  const container = document.getElementById('mapContainer');
-
-  // Letters for rows
-  const rows = ['A','B','C','D','E'];
-
-  // Numbers for columns
+  const rows = ['A', 'B', 'C', 'D', 'E'];
   const cols = [1,2,3,4,5];
 
-  // Create the grid
+  const mapContainer = document.getElementById('map');
+
+  // Create cells
   rows.forEach(r => {
     cols.forEach(c => {
       const cell = document.createElement('div');
-      cell.className = 'map-cell';
-      cell.textContent = r + c; // Example: A1, B3, etc.
+      cell.className = 'cell';
+      cell.dataset.coord = r + c;
+      cell.textContent = r + c;
       cell.addEventListener('click', () => {
-        alert('You clicked cell ' + r + c);
-        // Here you can add actions for each coordinate
+        // Toggle color on click
+        if(cell.classList.contains('green')) {
+          cell.classList.remove('green');
+          cell.classList.add('red');
+        } else {
+          cell.classList.remove('red');
+          cell.classList.add('green');
+        }
       });
-      container.appendChild(cell);
+      mapContainer.appendChild(cell);
     });
   });
 </script>
-
 </body>
 </html>
