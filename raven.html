@@ -16,14 +16,25 @@
     color: white;
   }
 
-  .map-container {
+  .map-wrapper {
+    display: inline-block;
+  }
+
+  .map-grid {
     display: grid;
-    grid-template-columns: repeat(5, 60px);
-    grid-template-rows: repeat(5, 60px);
+    grid-template-columns: 30px repeat(5, 60px);
+    grid-template-rows: 30px repeat(5, 60px);
     gap: 4px;
     background-color: #111;
-    padding: 10px;
+    padding: 5px;
     border: 2px solid white;
+  }
+
+  .axis {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
   }
 
   .cell {
@@ -59,24 +70,43 @@
 </style>
 </head>
 <body>
-<div class="map-container" id="map"></div>
+<div class="map-wrapper">
+  <div class="map-grid" id="map"></div>
+</div>
 <div class="footer">Made by Lonloy</div>
 
 <script>
   const rows = ['A', 'B', 'C', 'D', 'E'];
-  const cols = [1,2,3,4,5];
-
+  const cols = [1, 2, 3, 4, 5];
   const mapContainer = document.getElementById('map');
 
-  // Create cells
+  // Top-left empty corner
+  const corner = document.createElement('div');
+  mapContainer.appendChild(corner);
+
+  // X-axis labels
+  cols.forEach(c => {
+    const label = document.createElement('div');
+    label.className = 'axis';
+    label.textContent = c;
+    mapContainer.appendChild(label);
+  });
+
+  // Rows
   rows.forEach(r => {
+    // Y-axis label
+    const yLabel = document.createElement('div');
+    yLabel.className = 'axis';
+    yLabel.textContent = r;
+    mapContainer.appendChild(yLabel);
+
+    // Cells in row
     cols.forEach(c => {
       const cell = document.createElement('div');
       cell.className = 'cell';
       cell.dataset.coord = r + c;
       cell.textContent = r + c;
       cell.addEventListener('click', () => {
-        // Toggle color on click
         if(cell.classList.contains('green')) {
           cell.classList.remove('green');
           cell.classList.add('red');
