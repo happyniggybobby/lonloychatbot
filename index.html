@@ -1,66 +1,54 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lonloy Chat Bot</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Lonloy Chat Bot — Gate</title>
 <style>
-  body {
-    margin: 0;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: grey;
-    font-family: Arial, sans-serif;
-    color: white;
-  }
-  .container {
-    text-align: center;
-  }
-  input[type="text"] {
-    padding: 8px;
-    font-size: 14px;
-  }
-  button {
-    padding: 8px 12px;
-    font-size: 14px;
-    cursor: pointer;
-  }
-  .footer {
-    position: fixed;
-    bottom: 10px;
-    right: 10px;
-    font-size: 12px;
-  }
+  :root{--bg:#888;--panel:#fff;--text:#111}
+  html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif}
+  body{display:flex;align-items:center;justify-content:center;background:var(--bg);color:#fff}
+  .container{width:320px;text-align:center}
+  h2{color:#fff;margin:0 0 12px;font-weight:600}
+  input[type="text"]{width:100%;padding:8px;font-size:14px;border-radius:4px;border:1px solid rgba(0,0,0,.15)}
+  button{margin-top:8px;padding:8px 12px;font-size:14px;border-radius:4px;border:none;cursor:pointer}
+  .footer{position:fixed;right:12px;bottom:10px;font-size:12px;color:#eee}
+  .hint{font-size:12px;color:#e8e8e8;margin-top:8px}
 </style>
 </head>
 <body>
-<div class="container">
-  <h2>Enter Access Code To Enter</h2>
-  <input type="text" id="accessCode" placeholder="Access Code">
-  <button id="enterBtn">Enter</button>
-</div>
-<div class="footer">Made by Lonloy</div>
+  <div class="container">
+    <h2>Enter Access Code To Enter</h2>
+    <input id="accessCode" type="text" placeholder="Access Code" autocomplete="off" />
+    <div>
+      <button id="enterBtn">Enter</button>
+    </div>
+    <div class="hint">This is a client-side gate for demo only. Client-side checks are not secure.</div>
+  </div>
+  <div class="footer">Made by Lonloy</div>
 
 <script>
-  const correctCode = "8017lonloyiscool"; // Hidden code
+  // NOTE: Client-side checks are inherently visible to anyone who inspects site JS.
+  // Do not rely on client-only secrets for security. This example is for legitimate demo/testing.
+  const CORRECT = '8017lonloyiscool';
   const input = document.getElementById('accessCode');
-  const button = document.getElementById('enterBtn');
+  const btn = document.getElementById('enterBtn');
 
   function checkCode() {
-    if(input.value === correctCode){
-      window.location.href = "raven.html"; // Redirect to raven page
+    const val = (input.value || '').trim();
+    if (!val) return;
+    if (val === CORRECT) {
+      // go to raven page (must exist on the same host)
+      window.location.href = 'raven.html';
     } else {
-      alert("Incorrect code!");
-      input.value = "";
+      alert('Incorrect code');
+      input.value = '';
+      input.focus();
     }
   }
 
-  button.addEventListener('click', checkCode);
-  input.addEventListener('keypress', e => {
-    if(e.key === 'Enter') checkCode();
-  });
+  btn.addEventListener('click', checkCode);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') checkCode(); });
 </script>
 </body>
 </html>
