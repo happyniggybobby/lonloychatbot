@@ -7,117 +7,125 @@
 <style>
   body {
     margin: 0;
-    height: 100vh;
+    font-family: Arial, sans-serif;
+    background-color: black;
+    color: white;
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: black;
-    font-family: Arial, sans-serif;
-    color: white;
+    height: 100vh;
   }
-
-  .map-wrapper {
-    display: inline-block;
-  }
-
-  .map-grid {
+  .grid-container {
     display: grid;
-    grid-template-columns: 30px repeat(5, 60px);
-    grid-template-rows: 30px repeat(5, 60px);
+    grid-template-columns: repeat(5, 60px);
+    grid-template-rows: repeat(5, 60px);
     gap: 4px;
-    background-color: #111;
-    padding: 5px;
-    border: 2px solid white;
+    position: relative;
   }
-
-  .axis {
+  .cell {
+    width: 60px;
+    height: 60px;
+    background-color: grey;
     display: flex;
     justify-content: center;
     align-items: center;
     font-weight: bold;
-  }
-
-  .cell {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: #222;
     border: 1px solid #555;
-    cursor: pointer;
-    font-size: 14px;
-    color: white;
     user-select: none;
   }
-
-  .cell.green {
-    background-color: green;
+  .label-row {
+    position: absolute;
+    top: -20px;
+    display: flex;
+    gap: 4px;
   }
-
-  .cell.red {
-    background-color: red;
+  .label-col {
+    position: absolute;
+    left: -20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
   }
-
-  .cell:hover {
-    opacity: 0.7;
+  .label {
+    width: 60px;
+    text-align: center;
   }
-
-  .footer {
-    position: fixed;
-    bottom: 10px;
-    right: 10px;
-    font-size: 12px;
+  .label-c {
+    height: 60px;
+    line-height: 60px;
+    text-align: center;
   }
 </style>
 </head>
 <body>
-<div class="map-wrapper">
-  <div class="map-grid" id="map"></div>
+
+<div style="position: relative;">
+  <div class="label-row" id="colLabels"></div>
+  <div class="label-col" id="rowLabels"></div>
+  <div class="grid-container" id="grid"></div>
 </div>
-<div class="footer">Made by Lonloy</div>
 
 <script>
-  const rows = ['A', 'B', 'C', 'D', 'E'];
-  const cols = [1, 2, 3, 4, 5];
-  const mapContainer = document.getElementById('map');
+// Build the grid
+const rows = ['A','B','C','D','E'];
+const cols = ['1','2','3','4','5'];
+const grid = document.getElementById('grid');
 
-  // Top-left empty corner
-  const corner = document.createElement('div');
-  mapContainer.appendChild(corner);
+// Create column labels
+const colLabels = document.getElementById('colLabels');
+cols.forEach(c => {
+  const lbl = document.createElement('div');
+  lbl.className = 'label';
+  lbl.innerText = c;
+  colLabels.appendChild(lbl);
+});
 
-  // X-axis labels
+// Create row labels
+const rowLabels = document.getElementById('rowLabels');
+rows.forEach(r => {
+  const lbl = document.createElement('div');
+  lbl.className = 'label-c';
+  lbl.innerText = r;
+  rowLabels.appendChild(lbl);
+});
+
+// Create cells
+const cells = {};
+rows.forEach(r => {
   cols.forEach(c => {
-    const label = document.createElement('div');
-    label.className = 'axis';
-    label.textContent = c;
-    mapContainer.appendChild(label);
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.dataset.row = r;
+    cell.dataset.col = c;
+    grid.appendChild(cell);
+    cells[`${r}${c}`] = cell;
   });
+});
 
-  // Rows
-  rows.forEach(r => {
-    // Y-axis label
-    const yLabel = document.createElement('div');
-    yLabel.className = 'axis';
-    yLabel.textContent = r;
-    mapContainer.appendChild(yLabel);
+// Function to update a cell color
+function updateCell(row, col, status) {
+  const key = `${row}${col}`;
+  if (!cells[key]) return;
+  switch(status) {
+    case 'red': // hit
+      cells[key].style.backgroundColor = 'green';
+      break;
+    case 'gone': // no longer hit
+      cells[key].style.backgroundColor = 'grey';
+      break;
+  }
+}
 
-    // Cells in row
-    cols.forEach(c => {
-      const cell = document.createElement('div');
-      cell.className = 'cell';
-      cell.dataset.coord = r + c;
-      cell.textContent = r + c;
-      cell.addEventListener('click', () => {
-        if(cell.classList.contains('green')) {
-          cell.classList.remove('green');
-          cell.classList.add('red');
-        } else {
-          cell.classList.remove('red');
-          cell.classList.add('green');
-        }
-      });
-      mapContainer.appendChild(cell);
-    });
-  });
+// Simulate receiving data from Drednot.io script
+// Replace this with the actual script sending data to raven.html
+function receiveTileUpdate(row, col, status) {
+  updateCell(row, col, status);
+}
+
+// Example usage (for testing):
+// setTimeout(() => receiveTileUpdate('A','1','red'), 1000);
+// setTimeout(() => receiveTileUpdate('A','1','gone'), 3000);
 </script>
+
 </body>
 </html>
