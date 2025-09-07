@@ -1,151 +1,59 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Raven — Grid</title>
-<style>
-  :root{--bg:#000;--tile:#666;--label:#ddd}
-  html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif}
-  body{background:var(--bg);color:var(--label);display:flex;align-items:center;justify-content:center}
-  .panel{width:540px;padding:18px;background:rgba(255,255,255,0.03);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.5)}
-  .tabs{display:flex;gap:8px;margin-bottom:14px}
-  .tab{padding:6px 12px;background:#111;border-radius:4px;color:#ccc;cursor:pointer}
-  .tab.active{background:#222;color:#fff;border:1px solid #333}
-  .gridWrap{display:grid;grid-template-columns:40px repeat(5,72px);grid-auto-rows:40px;gap:6px;align-items:center}
-  .corner{width:40px;height:40px}
-  .colLabel{display:flex;align-items:center;justify-content:center;height:40px;color:#bbb}
-  .rowLabel{display:flex;align-items:center;justify-content:center;width:40px;height:72px;color:#bbb}
-  .tile{width:72px;height:72px;background:var(--tile);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#111;font-weight:700;cursor:pointer;transition:background .12s}
-  .controls{margin-top:12px;color:#bbb;display:flex;gap:8px;align-items:center}
-  .footer{position:fixed;right:12px;bottom:10px;font-size:12px;color:#ccc}
-  .small{font-size:13px;color:#bbb}
-</style>
+  <meta charset="UTF-8">
+  <title>Raven Map</title>
+  <style>
+    body { display:flex; justify-content:center; align-items:center; height:100vh; background:#111; }
+    #grid { display:grid; grid-template-columns:repeat(5,60px); grid-template-rows:repeat(5,60px); gap:2px; }
+    .cell { width:60px; height:60px; background:#444; display:flex; justify-content:center; align-items:center; color:white; font-size:14px; }
+  </style>
 </head>
 <body>
-  <div class="panel">
-    <div class="tabs">
-      <div class="tab active" data-mode="raven">raven</div>
-      <div class="tab" data-mode="falcon">falcon</div>
-    </div>
+  <div id="grid"></div>
+  <script>
+    const AXIS_Y = ['A','B','C','D','E'];
+    const grid=document.getElementById("grid");
+    const TILE_DOTS=[];
+    const DOT_DURATION=10000; // 10s persistence
 
-    <div class="gridWrap" id="gridWrap">
-      <div class="corner"></div>
-      <!-- column labels -->
-      <div class="colLabel">1</div>
-      <div class="colLabel">2</div>
-      <div class="colLabel">3</div>
-      <div class="colLabel">4</div>
-      <div class="colLabel">5</div>
+    // build grid
+    for(let r=0;r<5;r++){
+      for(let c=1;c<=5;c++){
+        const cell=document.createElement("div");
+        cell.className="cell";
+        cell.dataset.row=AXIS_Y[r];
+        cell.dataset.col=c;
+        cell.textContent=AXIS_Y[r]+c;
+        grid.appendChild(cell);
+      }
+    }
 
-      <!-- rows A..E -->
-      <!-- for each row: row label + five tiles -->
-      <!-- Row A -->
-      <div class="rowLabel">A</div>
-      <div id="A1" class="tile">A1</div>
-      <div id="A2" class="tile">A2</div>
-      <div id="A3" class="tile">A3</div>
-      <div id="A4" class="tile">A4</div>
-      <div id="A5" class="tile">A5</div>
+    // pull data from query params (for testing)
+    const params=new URLSearchParams(window.location.search);
+    if(params.has("row")&&params.has("col")&&params.has("color")){
+      const row=params.get("row"), col=params.get("col"), color=params.get("color");
+      TILE_DOTS.push({row,col,color,expires:Date.now()+DOT_DURATION});
+    }
 
-      <div class="rowLabel">B</div>
-      <div id="B1" class="tile">B1</div>
-      <div id="B2" class="tile">B2</div>
-      <div id="B3" class="tile">B3</div>
-      <div id="B4" class="tile">B4</div>
-      <div id="B5" class="tile">B5</div>
-
-      <div class="rowLabel">C</div>
-      <div id="C1" class="tile">C1</div>
-      <div id="C2" class="tile">C2</div>
-      <div id="C3" class="tile">C3</div>
-      <div id="C4" class="tile">C4</div>
-      <div id="C5" class="tile">C5</div>
-
-      <div class="rowLabel">D</div>
-      <div id="D1" class="tile">D1</div>
-      <div id="D2" class="tile">D2</div>
-      <div id="D3" class="tile">D3</div>
-      <div id="D4" class="tile">D4</div>
-      <div id="D5" class="tile">D5</div>
-
-      <div class="rowLabel">E</div>
-      <div id="E1" class="tile">E1</div>
-      <div id="E2" class="tile">E2</div>
-      <div id="E3" class="tile">E3</div>
-      <div id="E4" class="tile">E4</div>
-      <div id="E5" class="tile">E5</div>
-    </div>
-
-    <div class="controls">
-      <div class="small">Test message:</div>
-      <select id="selRow">
-        <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option><option value="E">E</option>
-      </select>
-      <select id="selCol">
-        <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-      </select>
-      <select id="selColor">
-        <option value="red">red</option>
-        <option value="yellow">yellow</option>
-        <option value="green">green</option>
-        <option value="#999">reset (grey)</option>
-      </select>
-      <button id="sendTest">Send to grid</button>
-    </div>
-  </div>
-
-  <div class="footer">Made by Lonloy</div>
-
-<script>
-  // Basic tile update logic
-  const RESET_MS = 5000; // milliseconds before a tile returns to grey
-  function setTile(id, color) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.style.background = color === '#999' ? '#666' : color;
-    // clear prior timeout
-    if (el._resetTimer) clearTimeout(el._resetTimer);
-    if (color === '#999') return;
-    el._resetTimer = setTimeout(()=> { el.style.background = '#666'; }, RESET_MS);
-  }
-
-  // Manual click toggles cycle (for testing)
-  document.querySelectorAll('.tile').forEach(t=>{
-    t.addEventListener('click', ()=>{
-      const current = t.style.background || '#666';
-      if (current === 'red') setTile(t.id, 'green');
-      else if (current === 'green') setTile(t.id, 'yellow');
-      else setTile(t.id, 'red');
-    });
-  });
-
-  // Tab switching (visual only)
-  document.querySelectorAll('.tab').forEach(tab=>{
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-      tab.classList.add('active');
-      // you can add mode-specific behavior here
-    });
-  });
-
-  // safe postMessage listener: accepts messages from your own apps/tabs for testing.
-  window.addEventListener('message', ev => {
-    const d = ev.data;
-    // Only accept messages shaped {row:'A', col:1, color:'red'} (any origin in this demo)
-    if (!d || typeof d.row !== 'string' || typeof d.col === 'undefined') return;
-    const id = String(d.row).toUpperCase() + String(d.col);
-    setTile(id, d.color || 'red');
-  }, false);
-
-  // UI test sender (sends to same window to simulate incoming message)
-  document.getElementById('sendTest').addEventListener('click', ()=>{
-    const row = document.getElementById('selRow').value;
-    const col = document.getElementById('selCol').value;
-    const color = document.getElementById('selColor').value;
-    // simulate a postMessage arriving from elsewhere
-    window.postMessage({row, col, color}, '*');
-  });
-</script>
+    function draw(){
+      const now=Date.now();
+      document.querySelectorAll(".cell").forEach(cell=>{
+        cell.style.background="#444"; // reset grey
+      });
+      for(let i=TILE_DOTS.length-1;i>=0;i--){
+        const dot=TILE_DOTS[i];
+        if(dot.expires>now){
+          const cell=document.querySelector(`[data-row='${dot.row}'][data-col='${dot.col}']`);
+          if(cell) cell.style.background=dot.color;
+        } else {
+          TILE_DOTS.splice(i,1);
+        }
+      }
+      requestAnimationFrame(draw);
+    }
+    draw();
+  </script>
 </body>
 </html>
+
