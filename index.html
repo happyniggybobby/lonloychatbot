@@ -44,13 +44,13 @@
 <div class="footer">Made by Lonloy</div>
 
 <script>
-  const correctCode = "8017lonloyiscool"; // hidden logic
+  const correctCode = "8017lonloyiscool"; // Hidden code
   const input = document.getElementById('accessCode');
   const button = document.getElementById('enterBtn');
 
   function checkCode() {
     if(input.value === correctCode){
-      window.location.href = "raven.html"; // redirect to map page
+      window.location.href = "raven.html"; // Redirect to raven page
     } else {
       alert("Incorrect code!");
       input.value = "";
@@ -58,7 +58,9 @@
   }
 
   button.addEventListener('click', checkCode);
-  input.addEventListener('keypress', e => { if(e.key === 'Enter') checkCode(); });
+  input.addEventListener('keypress', e => {
+    if(e.key === 'Enter') checkCode();
+  });
 </script>
 </body>
 </html>
