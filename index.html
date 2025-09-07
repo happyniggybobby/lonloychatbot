@@ -1,67 +1,69 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lonloy Chat Bot</title>
-    <style>
-        body {
-            margin: 0;
-            background-color: grey;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            font-family: Arial, sans-serif;
-        }
-        #container {
-            text-align: center;
-        }
-        #access-code {
-            padding: 8px;
-            font-size: 16px;
-        }
-        #enter-btn {
-            padding: 8px 12px;
-            font-size: 16px;
-            margin-left: 4px;
-            cursor: pointer;
-        }
-        #footer {
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
-            color: white;
-            font-size: 12px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lonloy Chat Bot</title>
+<style>
+  body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: grey;
+    font-family: Arial, sans-serif;
+    color: white;
+  }
+  .container {
+    text-align: center;
+  }
+  input[type="text"] {
+    padding: 8px;
+    font-size: 14px;
+  }
+  button {
+    padding: 8px 12px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .footer {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    font-size: 12px;
+  }
+</style>
 </head>
 <body>
-    <div id="container">
-        <h2 style="color:white;">Enter Access Code To Enter</h2>
-        <input type="password" id="access-code" placeholder="Access Code" />
-        <button id="enter-btn">Enter</button>
-    </div>
-    <div id="footer">Made by lonloy</div>
+<div class="container">
+  <h2>Enter Access Code To Enter</h2>
+  <input type="text" id="accessCode" placeholder="Access Code">
+  <button id="enterBtn">Enter</button>
+</div>
+<div class="footer">Made by Lonloy</div>
 
-    <script>
-        const correctCode = "8017lonloyiscool"; // hidden from normal display
-        const input = document.getElementById("access-code");
-        const btn = document.getElementById("enter-btn");
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Obfuscated access code
+  const correctCode = atob("ODAxN2xvbmxveWlzY29vbA=="); // "8017lonloyiscool"
+  const input = document.getElementById('accessCode');
+  const button = document.getElementById('enterBtn');
 
-        function checkCode() {
-            if(input.value === correctCode){
-                window.location.href = "raven.html"; // redirect to next page
-            } else {
-                alert("Wrong code!");
-            }
-        }
+  function checkCode() {
+    if(input.value === correctCode){
+      window.location.href = "raven.html"; // redirect to next page
+    } else {
+      alert("Incorrect code!");
+      input.value = "";
+    }
+  }
 
-        btn.addEventListener("click", checkCode);
-        input.addEventListener("keypress", e => {
-            if(e.key === "Enter") checkCode();
-        });
-    </script>
+  button.addEventListener('click', checkCode);
+  input.addEventListener('keypress', e => {
+    if(e.key === 'Enter') checkCode();
+  });
+});
+</script>
 </body>
 </html>
-
