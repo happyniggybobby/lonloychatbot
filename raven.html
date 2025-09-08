@@ -21,6 +21,7 @@
   <div class="gridWrap" id="gridWrap">
     <div class="corner"></div>
     <div class="colLabel">1</div><div class="colLabel">2</div><div class="colLabel">3</div><div class="colLabel">4</div><div class="colLabel">5</div>
+
     <div class="rowLabel">A</div><div id="A1" class="tile">A1</div><div id="A2" class="tile">A2</div><div id="A3" class="tile">A3</div><div id="A4" class="tile">A4</div><div id="A5" class="tile">A5</div>
     <div class="rowLabel">B</div><div id="B1" class="tile">B1</div><div id="B2" class="tile">B2</div><div id="B3" class="tile">B3</div><div id="B4" class="tile">B4</div><div id="B5" class="tile">B5</div>
     <div class="rowLabel">C</div><div id="C1" class="tile">C1</div><div id="C2" class="tile">C2</div><div id="C3" class="tile">C3</div><div id="C4" class="tile">C4</div><div id="C5" class="tile">C5</div>
@@ -31,7 +32,7 @@
 </div>
 
 <script>
-  const RESET_MS = 10000; // newly damaged tiles reset after 10s
+  const RESET_MS = 10000; // 10 seconds for newly damaged tiles
   function setTile(id, color) {
     const el = document.getElementById(id);
     if(!el) return;
@@ -42,15 +43,18 @@
     }
   }
 
-  // Listen for messages from proxy
-  window.addEventListener('message', ev=>{
-    const d = ev.data;
-    if(!d || typeof d.row!=='string' || typeof d.col==='undefined') return;
-    const id = String(d.row).toUpperCase() + String(d.col);
-    setTile(id, d.color || 'red');
-  }, false);
+  // Connect directly to proxy
+  const ws = new WebSocket('ws://localhost:8080');
+
+  ws.onopen = ()=> console.log('✅ Connected to proxy');
+  ws.onmessage = ev => {
+    try {
+      const data = JSON.parse(ev.data);
+      if(!data.row || !data.col) return;
+      const id = data.row.toUpperCase() + data.col;
+      setTile(id, data.color || 'red');
+    } catch(e){}
+  };
 </script>
 </body>
 </html>
-
-
