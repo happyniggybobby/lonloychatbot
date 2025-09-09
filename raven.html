@@ -58,6 +58,35 @@
     }
   };
   ws.onerror = err => console.warn("WebSocket error:", err);
+
+  // Optional: tiny visual overlay for corner like minimap (can be combined with the grid)
+  const overlay = document.createElement('canvas');
+  overlay.width = 150;
+  overlay.height = 150;
+  overlay.style.position = 'fixed';
+  overlay.style.bottom = '100px';
+  overlay.style.right = '22px';
+  overlay.style.pointerEvents = 'none';
+  overlay.style.zIndex = 99999;
+  document.body.appendChild(overlay);
+
+  const ctx = overlay.getContext('2d');
+  ctx.fillStyle = 'rgba(255,0,0,0.5)';
+
+  function drawOverlayTile(row, col, color='red'){
+    const cellSize = overlay.width / 5;
+    ctx.fillStyle = color;
+    ctx.fillRect((col-1)*cellSize, (row-1)*cellSize, cellSize, cellSize);
+  }
+
+  ws.addEventListener('message', e=>{
+    const d = JSON.parse(e.data);
+    const row = d.row.charCodeAt(0) - 65 + 1;
+    const col = d.col;
+    drawOverlayTile(row, col, d.color);
+    setTimeout(()=>{ drawOverlayTile(row, col, '#666') }, RESET_MS);
+  });
+
 </script>
 </body>
 </html>
