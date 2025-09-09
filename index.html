@@ -28,15 +28,16 @@
   <div class="footer">Made by Lonloy</div>
 
 <script>
-  const CORRECT = '0817lonloyispro'; // <-- fixed password
+  const CORRECT = '0817lonloyispro'; // <-- the correct password
   const input = document.getElementById('accessCode');
   const btn = document.getElementById('enterBtn');
 
   function checkCode() {
     const val = (input.value || '').trim();
-    if (!val) return;
-    if (val === CORRECT) {
-      window.location.href = 'raven.html'; // must exist in same folder
+    if(!val) return;
+    if(val === CORRECT){
+      // Redirect to raven.html automatically
+      window.location.href = 'raven.html';
     } else {
       alert('Incorrect code');
       input.value = '';
@@ -45,7 +46,7 @@
   }
 
   btn.addEventListener('click', checkCode);
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') checkCode(); });
+  input.addEventListener('keydown', e => { if(e.key === 'Enter') checkCode(); });
 </script>
 </body>
 </html>
