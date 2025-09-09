@@ -2,58 +2,46 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Raven — Grid</title>
+<title>Raven</title>
 <style>
-  :root { --bg:#000; --tile:#666; --label:#ddd; }
-  html,body { height:100%; margin:0; font-family:Arial,Helvetica,sans-serif; }
-  body { background:var(--bg); color:var(--label); display:flex; align-items:center; justify-content:center; }
-  .panel { width:540px; padding:18px; background:rgba(255,255,255,0.03); border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,.5); }
-  .gridWrap { display:grid; grid-template-columns:40px repeat(5,72px); grid-auto-rows:40px; gap:6px; align-items:center; }
-  .corner{width:40px;height:40px;}
-  .colLabel, .rowLabel{display:flex; align-items:center; justify-content:center; color:#bbb;}
-  .tile { width:72px; height:72px; background:var(--tile); border-radius:6px; display:flex; align-items:center; justify-content:center; color:#111; font-weight:700; transition:background .12s; }
-  .footer { position:fixed; right:12px; bottom:10px; font-size:12px; color:#ccc; }
+  body { background:#000; display:flex; justify-content:center; align-items:center; height:100vh; margin:0; }
+  .grid { display:grid; grid-template-columns:40px repeat(5,72px); grid-auto-rows:40px; gap:6px; }
+  .tile { width:72px; height:72px; background:#666; border-radius:6px;
+          display:flex; justify-content:center; align-items:center; color:#111; font-weight:700; }
+  .label { display:flex; justify-content:center; align-items:center; color:#bbb; }
 </style>
 </head>
 <body>
-<div class="panel">
-  <div class="gridWrap" id="gridWrap">
-    <div class="corner"></div>
-    <div class="colLabel">1</div><div class="colLabel">2</div><div class="colLabel">3</div><div class="colLabel">4</div><div class="colLabel">5</div>
-
-    <div class="rowLabel">A</div><div id="A1" class="tile">A1</div><div id="A2" class="tile">A2</div><div id="A3" class="tile">A3</div><div id="A4" class="tile">A4</div><div id="A5" class="tile">A5</div>
-    <div class="rowLabel">B</div><div id="B1" class="tile">B1</div><div id="B2" class="tile">B2</div><div id="B3" class="tile">B3</div><div id="B4" class="tile">B4</div><div id="B5" class="tile">B5</div>
-    <div class="rowLabel">C</div><div id="C1" class="tile">C1</div><div id="C2" class="tile">C2</div><div id="C3" class="tile">C3</div><div id="C4" class="tile">C4</div><div id="C5" class="tile">C5</div>
-    <div class="rowLabel">D</div><div id="D1" class="tile">D1</div><div id="D2" class="tile">D2</div><div id="D3" class="tile">D3</div><div id="D4" class="tile">D4</div><div id="D5" class="tile">D5</div>
-    <div class="rowLabel">E</div><div id="E1" class="tile">E1</div><div id="E2" class="tile">E2</div><div id="E3" class="tile">E3</div><div id="E4" class="tile">E4</div><div id="E5" class="tile">E5</div>
-  </div>
-  <div class="footer">Made by Lonloy</div>
+<div class="grid" id="grid">
+  <div></div><div class="label">1</div><div class="label">2</div><div class="label">3</div><div class="label">4</div><div class="label">5</div>
+  <div class="label">A</div><div id="A1" class="tile">A1</div><div id="A2" class="tile">A2</div><div id="A3" class="tile">A3</div><div id="A4" class="tile">A4</div><div id="A5" class="tile">A5</div>
+  <div class="label">B</div><div id="B1" class="tile">B1</div><div id="B2" class="tile">B2</div><div id="B3" class="tile">B3</div><div id="B4" class="tile">B4</div><div id="B5" class="tile">B5</div>
+  <div class="label">C</div><div id="C1" class="tile">C1</div><div id="C2" class="tile">C2</div><div id="C3" class="tile">C3</div><div id="C4" class="tile">C4</div><div id="C5" class="tile">C5</div>
+  <div class="label">D</div><div id="D1" class="tile">D1</div><div id="D2" class="tile">D2</div><div id="D3" class="tile">D3</div><div id="D4" class="tile">D4</div><div id="D5" class="tile">D5</div>
+  <div class="label">E</div><div id="E1" class="tile">E1</div><div id="E2" class="tile">E2</div><div id="E3" class="tile">E3</div><div id="E4" class="tile">E4</div><div id="E5" class="tile">E5</div>
 </div>
-
 <script>
-  const RESET_MS = 10000; // 10 seconds for newly damaged tiles
+  const RESET_MS = 10000;
+
   function setTile(id, color) {
     const el = document.getElementById(id);
-    if(!el) return;
-    el.style.background = color === '#999' ? '#666' : color;
-    if(el._resetTimer) clearTimeout(el._resetTimer);
-    if(color !== '#999') {
-      el._resetTimer = setTimeout(()=>{ el.style.background='#666'; }, RESET_MS);
+    if (!el) return;
+    el.style.background = color === "#999" ? "#666" : color;
+    if (el._resetTimer) clearTimeout(el._resetTimer);
+    if (color !== "#999") {
+      el._resetTimer = setTimeout(() => { el.style.background = "#666"; }, RESET_MS);
     }
   }
 
-  // Connect directly to proxy
-  const ws = new WebSocket('ws://localhost:8080');
-
-  ws.onopen = ()=> console.log('✅ Connected to proxy');
-  ws.onmessage = ev => {
+  const socket = new WebSocket("ws://localhost:8080");
+  socket.onopen = () => console.log("🔗 Connected to proxy");
+  socket.onmessage = ev => {
     try {
-      const data = JSON.parse(ev.data);
-      if(!data.row || !data.col) return;
-      const id = data.row.toUpperCase() + data.col;
-      setTile(id, data.color || 'red');
-    } catch(e){}
+      const d = JSON.parse(ev.data);
+      if (!d || !d.row || !d.col) return;
+      const id = d.row.toUpperCase() + d.col;
+      setTile(id, d.color || "red");
+    } catch {}
   };
 </script>
 </body>
