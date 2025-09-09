@@ -28,9 +28,7 @@
   <div class="footer">Made by Lonloy</div>
 
 <script>
-  // NOTE: Client-side checks are inherently visible to anyone who inspects site JS.
-  // Do not rely on client-only secrets for security. This example is for legitimate demo/testing.
-  const CORRECT = '8017lonloyiscool';
+  const CORRECT = '0817lonloyispro'; // <-- fixed password
   const input = document.getElementById('accessCode');
   const btn = document.getElementById('enterBtn');
 
@@ -38,8 +36,7 @@
     const val = (input.value || '').trim();
     if (!val) return;
     if (val === CORRECT) {
-      // go to raven page (must exist on the same host)
-      window.location.href = 'raven.html';
+      window.location.href = 'raven.html'; // must exist in same folder
     } else {
       alert('Incorrect code');
       input.value = '';
