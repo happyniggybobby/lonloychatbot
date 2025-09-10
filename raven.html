@@ -2,20 +2,22 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Raven — Grid</title>
 <style>
   :root { --bg:#000; --tile:#666; --label:#ddd; }
-  body { background:var(--bg); color:var(--label); font-family:sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0; }
-  .panel { padding:18px; background:rgba(255,255,255,0.05); border-radius:8px; }
-  .gridWrap { display:grid; grid-template-columns:40px repeat(5,72px); grid-auto-rows:40px; gap:6px; }
+  html, body { height:100%; margin:0; font-family:Arial,Helvetica,sans-serif; background:var(--bg); color:var(--label); display:flex; align-items:center; justify-content:center; }
+  .panel { width:540px; padding:18px; background:rgba(255,255,255,0.03); border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,.5); }
+  .gridWrap { display:grid; grid-template-columns:40px repeat(5,72px); grid-auto-rows:40px; gap:6px; align-items:center; }
   .corner{width:40px;height:40px;}
-  .colLabel,.rowLabel{display:flex;align-items:center;justify-content:center;color:#bbb;font-weight:bold;}
-  .tile { width:72px; height:72px; background:var(--tile); border-radius:6px; display:flex; align-items:center; justify-content:center; color:#111; font-weight:700; transition:background .2s; }
+  .colLabel, .rowLabel{display:flex; align-items:center; justify-content:center; color:#bbb;}
+  .tile { width:72px; height:72px; background:var(--tile); border-radius:6px; display:flex; align-items:center; justify-content:center; color:#111; font-weight:700; transition:background .12s; }
+  .footer { position:fixed; right:12px; bottom:10px; font-size:12px; color:#ccc; }
 </style>
 </head>
 <body>
 <div class="panel">
-  <div class="gridWrap">
+  <div class="gridWrap" id="gridWrap">
     <div class="corner"></div>
     <div class="colLabel">1</div><div class="colLabel">2</div><div class="colLabel">3</div><div class="colLabel">4</div><div class="colLabel">5</div>
 
@@ -25,22 +27,55 @@
     <div class="rowLabel">D</div><div id="D1" class="tile">D1</div><div id="D2" class="tile">D2</div><div id="D3" class="tile">D3</div><div id="D4" class="tile">D4</div><div id="D5" class="tile">D5</div>
     <div class="rowLabel">E</div><div id="E1" class="tile">E1</div><div id="E2" class="tile">E2</div><div id="E3" class="tile">E3</div><div id="E4" class="tile">E4</div><div id="E5" class="tile">E5</div>
   </div>
+  <div class="footer">Made by Lonloy</div>
 </div>
 
 <script>
   const RESET_MS = 10000;
-  function setTile(id, color) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.style.background = color;
-    if (el._reset) clearTimeout(el._reset);
-    el._reset = setTimeout(()=>{ el.style.background = "#666"; }, RESET_MS);
+  const activeDots = [];
+
+  function setTile(row,col,color){
+    const id = row+col;
+    const tile = document.getElementById(id);
+    if(!tile) return;
+    tile.style.background = color;
+    if(tile._reset) clearTimeout(tile._reset);
+    tile._reset = setTimeout(()=>{ tile.style.background='#666'; }, RESET_MS);
   }
 
-  window.addEventListener("message", ev => {
+  // Fade out overlay dots for extra visual feedback
+  const overlay = document.createElement('canvas');
+  overlay.width = 150;
+  overlay.height = 150;
+  overlay.style.position = 'fixed';
+  overlay.style.bottom = '100px';
+  overlay.style.right = '22px';
+  overlay.style.pointerEvents = 'none';
+  overlay.style.zIndex = 99999;
+  document.body.appendChild(overlay);
+  const ctx = overlay.getContext('2d');
+
+  function drawOverlay(){
+    const now = Date.now();
+    ctx.clearRect(0,0,overlay.width,overlay.height);
+    const cellSize = overlay.width / 5;
+    for(let i = activeDots.length-1;i>=0;i--){
+      const dot = activeDots[i];
+      if(dot.expires<now){ activeDots.splice(i,1); continue; }
+      const x = (dot.col-1)*cellSize;
+      const y = (dot.row.charCodeAt(0)-65)*cellSize;
+      ctx.fillStyle = dot.color;
+      ctx.fillRect(x,y,cellSize,cellSize);
+    }
+  }
+  setInterval(drawOverlay,50);
+
+  // Listen for Tampermonkey script messages
+  window.addEventListener('message',ev=>{
     const d = ev.data;
-    if (d && d.row && d.col) {
-      setTile(d.row + d.col, d.color || "red");
+    if(d && d.row && d.col){
+      setTile(d.row,d.col,d.color || 'red');
+      activeDots.push({ row:d.row, col:d.col, color:d.color||'red', expires:Date.now()+RESET_MS });
     }
   });
 </script>
