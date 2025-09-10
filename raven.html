@@ -2,91 +2,52 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Raven — Grid</title>
+<title>Raven — Dots</title>
 <style>
-  :root { --bg:#000; --tile:#666; --label:#ddd; }
-  html, body { height:100%; margin:0; font-family:Arial,Helvetica,sans-serif; }
-  body { background:var(--bg); color:var(--label); display:flex; align-items:center; justify-content:center; }
-  .panel { width:540px; padding:18px; background:rgba(255,255,255,0.03); border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,.5); }
-  .gridWrap { display:grid; grid-template-columns:40px repeat(5,72px); grid-auto-rows:40px; gap:6px; align-items:center; }
-  .corner{width:40px;height:40px;}
-  .colLabel, .rowLabel{display:flex; align-items:center; justify-content:center; color:#bbb;}
-  .tile { width:72px; height:72px; background:var(--tile); border-radius:6px; display:flex; align-items:center; justify-content:center; color:#111; font-weight:700; transition:background .12s; }
-  .footer { position:fixed; right:12px; bottom:10px; font-size:12px; color:#ccc; }
+  body { background:#000; margin:0; display:flex; align-items:center; justify-content:center; height:100vh; }
+  canvas { background:#111; border:1px solid #444; }
 </style>
 </head>
 <body>
-<div class="panel">
-  <div class="gridWrap" id="gridWrap">
-    <div class="corner"></div>
-    <div class="colLabel">1</div><div class="colLabel">2</div><div class="colLabel">3</div><div class="colLabel">4</div><div class="colLabel">5</div>
-
-    <div class="rowLabel">A</div><div id="A1" class="tile">A1</div><div id="A2" class="tile">A2</div><div id="A3" class="tile">A3</div><div id="A4" class="tile">A4</div><div id="A5" class="tile">A5</div>
-    <div class="rowLabel">B</div><div id="B1" class="tile">B1</div><div id="B2" class="tile">B2</div><div id="B3" class="tile">B3</div><div id="B4" class="tile">B4</div><div id="B5" class="tile">B5</div>
-    <div class="rowLabel">C</div><div id="C1" class="tile">C1</div><div id="C2" class="tile">C2</div><div id="C3" class="tile">C3</div><div id="C4" class="tile">C4</div><div id="C5" class="tile">C5</div>
-    <div class="rowLabel">D</div><div id="D1" class="tile">D1</div><div id="D2" class="tile">D2</div><div id="D3" class="tile">D3</div><div id="D4" class="tile">D4</div><div id="D5" class="tile">D5</div>
-    <div class="rowLabel">E</div><div id="E1" class="tile">E1</div><div id="E2" class="tile">E2</div><div id="E3" class="tile">E3</div><div id="E4" class="tile">E4</div><div id="E5" class="tile">E5</div>
-  </div>
-  <div class="footer">Made by Lonloy</div>
-</div>
+<canvas id="grid" width="300" height="300"></canvas>
 
 <script>
-  const RESET_MS = 10000; // newly damaged tiles reset after 10s
+const canvas = document.getElementById("grid");
+const ctx = canvas.getContext("2d");
+const SIZE = 5;
+const CELL = canvas.width / SIZE;
+const RESET_MS = 10000;
 
-  function setTile(id, color) {
-    const el = document.getElementById(id);
-    if(!el) return;
-    el.style.background = color === '#999' ? '#666' : color;
-    if(el._resetTimer) clearTimeout(el._resetTimer);
-    if(color !== '#999') {
-      el._resetTimer = setTimeout(()=>{ el.style.background='#666'; }, RESET_MS);
-    }
+function drawGrid(){
+  ctx.strokeStyle = "#333";
+  for(let i=0;i<=SIZE;i++){
+    ctx.beginPath();
+    ctx.moveTo(i*CELL,0); ctx.lineTo(i*CELL,canvas.height); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0,i*CELL); ctx.lineTo(canvas.width,i*CELL); ctx.stroke();
   }
+}
+drawGrid();
 
-  // Connect to local proxy
-  const ws = new WebSocket("ws://localhost:8080");
-  ws.onopen = () => console.log("✅ Connected to Raven Proxy");
-  ws.onmessage = ev => {
-    try {
-      const data = JSON.parse(ev.data);
-      if(!data.row || !data.col) return;
-      const id = String(data.row).toUpperCase() + String(data.col);
-      setTile(id, data.color || "red");
-    } catch(e) {
-      console.warn("Failed to parse proxy message:", e);
-    }
-  };
-  ws.onerror = err => console.warn("WebSocket error:", err);
+function setDot(row,col,color="red"){
+  const x = (col-1)*CELL + CELL/2;
+  const y = (row-1)*CELL + CELL/2;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x,y,CELL/4,0,Math.PI*2);
+  ctx.fill();
+  setTimeout(()=>{ 
+    ctx.clearRect((col-1)*CELL+1,(row-1)*CELL+1,CELL-2,CELL-2);
+    drawGrid();
+  }, RESET_MS);
+}
 
-  // Optional: tiny visual overlay for corner like minimap (can be combined with the grid)
-  const overlay = document.createElement('canvas');
-  overlay.width = 150;
-  overlay.height = 150;
-  overlay.style.position = 'fixed';
-  overlay.style.bottom = '100px';
-  overlay.style.right = '22px';
-  overlay.style.pointerEvents = 'none';
-  overlay.style.zIndex = 99999;
-  document.body.appendChild(overlay);
-
-  const ctx = overlay.getContext('2d');
-  ctx.fillStyle = 'rgba(255,0,0,0.5)';
-
-  function drawOverlayTile(row, col, color='red'){
-    const cellSize = overlay.width / 5;
-    ctx.fillStyle = color;
-    ctx.fillRect((col-1)*cellSize, (row-1)*cellSize, cellSize, cellSize);
+// Listen for Tampermonkey
+window.addEventListener("message", ev=>{
+  if(ev.data && ev.data.type==="dot"){
+    setDot(ev.data.row, ev.data.col, ev.data.color);
   }
-
-  ws.addEventListener('message', e=>{
-    const d = JSON.parse(e.data);
-    const row = d.row.charCodeAt(0) - 65 + 1;
-    const col = d.col;
-    drawOverlayTile(row, col, d.color);
-    setTimeout(()=>{ drawOverlayTile(row, col, '#666') }, RESET_MS);
-  });
-
+});
 </script>
 </body>
 </html>
