@@ -32,26 +32,26 @@
 </div>
 
 <script>
-  const RESET_MS = 10000; // fade back after 10s
+const RESET_MS = 10000;
 
-  function setTile(id, color) {
+function setTile(id, color) {
     const el = document.getElementById(id);
     if(!el) return;
     el.style.background = color;
     if(el._resetTimer) clearTimeout(el._resetTimer);
     if(color !== '#666') {
-      el._resetTimer = setTimeout(()=>{ el.style.background='#666'; }, RESET_MS);
+        el._resetTimer = setTimeout(()=>{ el.style.background='#666'; }, RESET_MS);
     }
-  }
+}
 
-  // Listen for messages from Tampermonkey
-  window.addEventListener('message', e=>{
+// Listen for messages from Tampermonkey
+window.addEventListener('message', e=>{
     const data = e.data;
     if(data.row && data.col && data.color){
-      const id = String(data.row).toUpperCase() + String(data.col);
-      setTile(id, data.color);
+        const id = String(data.row).toUpperCase() + String(data.col);
+        setTile(id, data.color);
     }
-  });
+});
 </script>
 </body>
 </html>
