@@ -4,59 +4,72 @@
 <meta charset="utf-8">
 <title>Raven — Dots</title>
 <style>
-  body { background:#000; margin:0; display:flex; align-items:center; justify-content:center; height:100vh; color:#ddd; font-family:Arial, sans-serif; }
-  .wrap { display:flex; flex-direction:column; align-items:center; }
-  .rowLabels { display:flex; margin-bottom:4px; }
-  .rowLabels div { width:60px; text-align:center; }
-  .gridWrap { display:flex; }
-  .colLabels { display:flex; flex-direction:column; margin-right:4px; }
-  .colLabels div { height:60px; display:flex; align-items:center; justify-content:center; }
-  canvas { background:#111; border:1px solid #444; }
+  body {
+    background:#000;
+    margin:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    height:100vh;
+    color:#ddd;
+    font-family:Arial, sans-serif;
+  }
+  canvas {
+    background:#111;
+    border:1px solid #444;
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <!-- Column numbers -->
-  <div class="rowLabels">
-    <div></div>
-    <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div>
-  </div>
-  <div class="gridWrap">
-    <!-- Row letters -->
-    <div class="colLabels">
-      <div>A</div><div>B</div><div>C</div><div>D</div><div>E</div>
-    </div>
-    <!-- Canvas -->
-    <canvas id="grid" width="300" height="300"></canvas>
-  </div>
-</div>
+<canvas id="grid" width="360" height="360"></canvas>
 
 <script>
 const canvas = document.getElementById("grid");
 const ctx = canvas.getContext("2d");
 const SIZE = 5;
-const CELL = canvas.width / SIZE;
+const CELL = canvas.width / (SIZE+1); // +1 for labels
 const RESET_MS = 10000;
 
 function drawGrid(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.strokeStyle = "#333";
-  for(let i=0;i<=SIZE;i++){
-    ctx.beginPath();
-    ctx.moveTo(i*CELL,0); ctx.lineTo(i*CELL,canvas.height); ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(0,i*CELL); ctx.lineTo(canvas.width,i*CELL); ctx.stroke();
+  ctx.font = "16px Arial";
+  ctx.fillStyle = "#bbb";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // Column numbers (top row)
+  for(let c=1;c<=SIZE;c++){
+    ctx.fillText(c, (c*CELL)+(CELL/2), CELL/2);
+  }
+
+  // Row letters (first column)
+  const letters = ["A","B","C","D","E"];
+  for(let r=1;r<=SIZE;r++){
+    ctx.fillText(letters[r-1], CELL/2, (r*CELL)+(CELL/2));
+  }
+
+  // Draw grid lines
+  for(let i=1;i<=SIZE;i++){
+    for(let j=1;j<=SIZE;j++){
+      ctx.strokeRect(i*CELL, j*CELL, CELL, CELL);
+    }
   }
 }
 drawGrid();
 
 function setDot(row,col,color="red"){
-  const x = (col-1)*CELL + CELL/2;
-  const y = (row-1)*CELL + CELL/2;
+  const letters = ["A","B","C","D","E"];
+  const rowIndex = letters.indexOf(row.toUpperCase());
+  if(rowIndex === -1) return;
+  const x = (col*CELL) + CELL/2;
+  const y = ((rowIndex+1)*CELL) + CELL/2;
+
   ctx.fillStyle = color;
   ctx.beginPath();
-  ctx.arc(x,y,CELL/4,0,Math.PI*2);
+  ctx.arc(x,y,CELL/3,0,Math.PI*2);
   ctx.fill();
+
   setTimeout(()=>{ drawGrid(); }, RESET_MS);
 }
 
