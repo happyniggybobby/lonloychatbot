@@ -6,7 +6,8 @@
 <title>Raven — Grid</title>
 <style>
   :root { --bg:#000; --tile:#666; --label:#ddd; }
-  html, body { height:100%; margin:0; font-family:Arial,Helvetica,sans-serif; background:var(--bg); color:var(--label); display:flex; align-items:center; justify-content:center; }
+  html, body { height:100%; margin:0; font-family:Arial,Helvetica,sans-serif; }
+  body { background:var(--bg); color:var(--label); display:flex; align-items:center; justify-content:center; }
   .panel { width:540px; padding:18px; background:rgba(255,255,255,0.03); border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,.5); }
   .gridWrap { display:grid; grid-template-columns:40px repeat(5,72px); grid-auto-rows:40px; gap:6px; align-items:center; }
   .corner{width:40px;height:40px;}
@@ -31,51 +32,24 @@
 </div>
 
 <script>
-  const RESET_MS = 10000;
-  const activeDots = [];
+  const RESET_MS = 10000; // fade back after 10s
 
-  function setTile(row,col,color){
-    const id = row+col;
-    const tile = document.getElementById(id);
-    if(!tile) return;
-    tile.style.background = color;
-    if(tile._reset) clearTimeout(tile._reset);
-    tile._reset = setTimeout(()=>{ tile.style.background='#666'; }, RESET_MS);
-  }
-
-  // Fade out overlay dots for extra visual feedback
-  const overlay = document.createElement('canvas');
-  overlay.width = 150;
-  overlay.height = 150;
-  overlay.style.position = 'fixed';
-  overlay.style.bottom = '100px';
-  overlay.style.right = '22px';
-  overlay.style.pointerEvents = 'none';
-  overlay.style.zIndex = 99999;
-  document.body.appendChild(overlay);
-  const ctx = overlay.getContext('2d');
-
-  function drawOverlay(){
-    const now = Date.now();
-    ctx.clearRect(0,0,overlay.width,overlay.height);
-    const cellSize = overlay.width / 5;
-    for(let i = activeDots.length-1;i>=0;i--){
-      const dot = activeDots[i];
-      if(dot.expires<now){ activeDots.splice(i,1); continue; }
-      const x = (dot.col-1)*cellSize;
-      const y = (dot.row.charCodeAt(0)-65)*cellSize;
-      ctx.fillStyle = dot.color;
-      ctx.fillRect(x,y,cellSize,cellSize);
+  function setTile(id, color) {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.style.background = color;
+    if(el._resetTimer) clearTimeout(el._resetTimer);
+    if(color !== '#666') {
+      el._resetTimer = setTimeout(()=>{ el.style.background='#666'; }, RESET_MS);
     }
   }
-  setInterval(drawOverlay,50);
 
-  // Listen for Tampermonkey script messages
-  window.addEventListener('message',ev=>{
-    const d = ev.data;
-    if(d && d.row && d.col){
-      setTile(d.row,d.col,d.color || 'red');
-      activeDots.push({ row:d.row, col:d.col, color:d.color||'red', expires:Date.now()+RESET_MS });
+  // Listen for messages from Tampermonkey
+  window.addEventListener('message', e=>{
+    const data = e.data;
+    if(data.row && data.col && data.color){
+      const id = String(data.row).toUpperCase() + String(data.col);
+      setTile(id, data.color);
     }
   });
 </script>
