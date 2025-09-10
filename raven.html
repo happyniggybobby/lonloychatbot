@@ -2,83 +2,47 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Raven — Dots</title>
+<title>Raven — Grid</title>
 <style>
-  body {
-    background:#000;
-    margin:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    height:100vh;
-    color:#ddd;
-    font-family:Arial, sans-serif;
-  }
-  canvas {
-    background:#111;
-    border:1px solid #444;
-  }
+  :root { --bg:#000; --tile:#666; --label:#ddd; }
+  body { background:var(--bg); color:var(--label); font-family:sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0; }
+  .panel { padding:18px; background:rgba(255,255,255,0.05); border-radius:8px; }
+  .gridWrap { display:grid; grid-template-columns:40px repeat(5,72px); grid-auto-rows:40px; gap:6px; }
+  .corner{width:40px;height:40px;}
+  .colLabel,.rowLabel{display:flex;align-items:center;justify-content:center;color:#bbb;font-weight:bold;}
+  .tile { width:72px; height:72px; background:var(--tile); border-radius:6px; display:flex; align-items:center; justify-content:center; color:#111; font-weight:700; transition:background .2s; }
 </style>
 </head>
 <body>
-<canvas id="grid" width="360" height="360"></canvas>
+<div class="panel">
+  <div class="gridWrap">
+    <div class="corner"></div>
+    <div class="colLabel">1</div><div class="colLabel">2</div><div class="colLabel">3</div><div class="colLabel">4</div><div class="colLabel">5</div>
+
+    <div class="rowLabel">A</div><div id="A1" class="tile">A1</div><div id="A2" class="tile">A2</div><div id="A3" class="tile">A3</div><div id="A4" class="tile">A4</div><div id="A5" class="tile">A5</div>
+    <div class="rowLabel">B</div><div id="B1" class="tile">B1</div><div id="B2" class="tile">B2</div><div id="B3" class="tile">B3</div><div id="B4" class="tile">B4</div><div id="B5" class="tile">B5</div>
+    <div class="rowLabel">C</div><div id="C1" class="tile">C1</div><div id="C2" class="tile">C2</div><div id="C3" class="tile">C3</div><div id="C4" class="tile">C4</div><div id="C5" class="tile">C5</div>
+    <div class="rowLabel">D</div><div id="D1" class="tile">D1</div><div id="D2" class="tile">D2</div><div id="D3" class="tile">D3</div><div id="D4" class="tile">D4</div><div id="D5" class="tile">D5</div>
+    <div class="rowLabel">E</div><div id="E1" class="tile">E1</div><div id="E2" class="tile">E2</div><div id="E3" class="tile">E3</div><div id="E4" class="tile">E4</div><div id="E5" class="tile">E5</div>
+  </div>
+</div>
 
 <script>
-const canvas = document.getElementById("grid");
-const ctx = canvas.getContext("2d");
-const SIZE = 5;
-const CELL = canvas.width / (SIZE+1); // +1 for labels
-const RESET_MS = 10000;
-
-function drawGrid(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.strokeStyle = "#333";
-  ctx.font = "16px Arial";
-  ctx.fillStyle = "#bbb";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-
-  // Column numbers (top row)
-  for(let c=1;c<=SIZE;c++){
-    ctx.fillText(c, (c*CELL)+(CELL/2), CELL/2);
+  const RESET_MS = 10000;
+  function setTile(id, color) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.background = color;
+    if (el._reset) clearTimeout(el._reset);
+    el._reset = setTimeout(()=>{ el.style.background = "#666"; }, RESET_MS);
   }
 
-  // Row letters (first column)
-  const letters = ["A","B","C","D","E"];
-  for(let r=1;r<=SIZE;r++){
-    ctx.fillText(letters[r-1], CELL/2, (r*CELL)+(CELL/2));
-  }
-
-  // Draw grid lines
-  for(let i=1;i<=SIZE;i++){
-    for(let j=1;j<=SIZE;j++){
-      ctx.strokeRect(i*CELL, j*CELL, CELL, CELL);
+  window.addEventListener("message", ev => {
+    const d = ev.data;
+    if (d && d.row && d.col) {
+      setTile(d.row + d.col, d.color || "red");
     }
-  }
-}
-drawGrid();
-
-function setDot(row,col,color="red"){
-  const letters = ["A","B","C","D","E"];
-  const rowIndex = letters.indexOf(row.toUpperCase());
-  if(rowIndex === -1) return;
-  const x = (col*CELL) + CELL/2;
-  const y = ((rowIndex+1)*CELL) + CELL/2;
-
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(x,y,CELL/3,0,Math.PI*2);
-  ctx.fill();
-
-  setTimeout(()=>{ drawGrid(); }, RESET_MS);
-}
-
-// Listen for Tampermonkey
-window.addEventListener("message", ev=>{
-  if(ev.data && ev.data.type==="dot"){
-    setDot(ev.data.row, ev.data.col, ev.data.color);
-  }
-});
+  });
 </script>
 </body>
 </html>
