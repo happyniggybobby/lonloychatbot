@@ -1,101 +1,215 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<title>Raven — Map</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Raven — Grid</title>
 <style>
-html, body {
-  margin: 0; padding: 0;
-  height: 100%; width: 100%;
-  background: #000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-canvas {
-  background: #111;
-  border: 2px solid #555;
-}
+  :root { --bg:#000; --tile:#222; --label:#ddd; --grid:#444; }
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--label);font-family:Arial,Helvetica,sans-serif;}
+  .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;}
+  .panel{width:600px;padding:18px;background:rgba(255,255,255,0.03);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.5);}
+  canvas{display:block;width:100%;height:auto;border-radius:6px;background:#0b0b0b}
+  .controls{margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .controls select,.controls input{padding:6px;border-radius:4px;border:1px solid #333;background:#111;color:#fff}
+  .controls button{padding:6px 10px;border-radius:4px;border:none;background:#1f6feb;color:#fff;cursor:pointer}
+  .footer{position:fixed;right:12px;bottom:10px;font-size:12px;color:#ccc}
+  .small{font-size:13px;color:#bbb}
 </style>
 </head>
 <body>
-<canvas id="map" width="500" height="500"></canvas>
+<div class="wrap">
+  <div class="panel">
+    <canvas id="map" width="540" height="540" aria-label="Raven Grid"></canvas>
+
+    <div class="controls" title="Test controls to simulate incoming tile events">
+      <label class="small">Row:
+        <select id="selRow"><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option></select>
+      </label>
+      <label class="small">Col:
+        <select id="selCol"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
+      </label>
+      <label class="small">Color:
+        <select id="selColor"><option value="white">white</option><option value="red">red</option><option value="yellow">yellow</option><option value="green">green</option></select>
+      </label>
+      <button id="sendTest">Send to grid</button>
+      <button id="clearAll">Clear</button>
+      <div class="small" style="margin-left:auto">Made by Lonloy</div>
+    </div>
+  </div>
+</div>
+<div class="footer">Test-only demo • accepts window.postMessage({row:'A',col:1,color:'white'})</div>
+
 <script>
-const canvas = document.getElementById('map');
-const ctx = canvas.getContext('2d');
+(function(){
+  const canvas = document.getElementById('map');
+  const ctx = canvas.getContext('2d');
 
-const GRID_SIZE = 5;
-const CELL_SIZE = canvas.width / GRID_SIZE;
-const DOT_RADIUS = 10;
-const DOT_DURATION = 10000; // 10s
-let dots = [];
+  // Grid config
+  const GRID_N = 5;
+  const AXIS_Y = ['A','B','C','D','E']; // A top -> E bottom
+  const RESET_MS = 10000; // ms to keep dots
+  const DOT_RADIUS = 12;
 
-function drawGrid() {
-  ctx.strokeStyle = "#333";
-  ctx.lineWidth = 1;
-  for (let i = 0; i <= GRID_SIZE; i++) {
-    // vertical lines
-    ctx.beginPath();
-    ctx.moveTo(i * CELL_SIZE, 0);
-    ctx.lineTo(i * CELL_SIZE, canvas.height);
-    ctx.stroke();
-    // horizontal lines
-    ctx.beginPath();
-    ctx.moveTo(0, i * CELL_SIZE);
-    ctx.lineTo(canvas.width, i * CELL_SIZE);
-    ctx.stroke();
+  // Keep dots as {id, row, col, color, expires, precise?:{x,y}}
+  let dots = [];
+
+  function fitCanvas() {
+    // Canvas is fixed pixel size but styled responsive; use its internal resolution for crisp drawing
+    const rect = canvas.getBoundingClientRect();
+    const DPR = window.devicePixelRatio || 1;
+    canvas.width = rect.width * DPR;
+    canvas.height = rect.width * DPR; // keep square
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    drawAll();
   }
 
-  // labels
-  ctx.fillStyle = "#aaa";
-  ctx.font = "16px monospace";
-  const rows = ["A","B","C","D","E"];
-  for (let r = 0; r < GRID_SIZE; r++) {
-    ctx.fillText(rows[r], 5, r * CELL_SIZE + 20);
+  window.addEventListener('resize', fitCanvas);
+  fitCanvas();
+
+  function cellSize() {
+    return canvas.width / GRID_N / (window.devicePixelRatio || 1);
   }
-  for (let c = 1; c <= GRID_SIZE; c++) {
-    ctx.fillText(c, c * CELL_SIZE - CELL_SIZE/2, canvas.height - 5);
+
+  function drawGrid() {
+    const c = canvas;
+    const size = c.width / (window.devicePixelRatio || 1);
+    const cell = size / GRID_N;
+    ctx.clearRect(0,0,size,size);
+
+    // background
+    ctx.fillStyle = '#0b0b0b';
+    ctx.fillRect(0,0,size,size);
+
+    // grid lines
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = 1;
+    for(let i=0;i<=GRID_N;i++){
+      // vertical
+      ctx.beginPath();
+      ctx.moveTo(i*cell + 0.5, 0.5);
+      ctx.lineTo(i*cell + 0.5, size + 0.5);
+      ctx.stroke();
+      // horizontal
+      ctx.beginPath();
+      ctx.moveTo(0.5, i*cell + 0.5);
+      ctx.lineTo(size + 0.5, i*cell + 0.5);
+      ctx.stroke();
+    }
+
+    // labels (rows left; cols top)
+    ctx.fillStyle = "#ddd";
+    ctx.font = Math.max(12, Math.floor(cell*0.18)) + "px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // top column numbers
+    for(let i=0;i<GRID_N;i++){
+      const x = (i + 0.5) * cell;
+      ctx.fillText(String(i+1), x, cell*0.12);
+    }
+
+    // left row letters
+    for(let r=0;r<GRID_N;r++){
+      const y = (r + 0.5) * cell;
+      ctx.fillText(AXIS_Y[r], cell*0.12, y);
+    }
   }
-}
 
-function drawDots() {
-  const now = Date.now();
-  dots = dots.filter(dot => dot.expires > now);
+  function drawAll() {
+    drawGrid();
+    const size = canvas.width / (window.devicePixelRatio || 1);
+    const cell = size / GRID_N;
+    // draw dots (keep order newest last)
+    const now = Date.now();
+    for (let i = 0; i < dots.length; i++) {
+      const d = dots[i];
+      if (d.expires <= now) continue;
+      ctx.beginPath();
+      ctx.fillStyle = d.color || "white";
 
-  for (let dot of dots) {
-    const rowIndex = ["A","B","C","D","E"].indexOf(dot.row);
-    const colIndex = dot.col - 1;
-
-    if (rowIndex < 0 || colIndex < 0) continue;
-
-    const x = colIndex * CELL_SIZE + CELL_SIZE / 2;
-    const y = rowIndex * CELL_SIZE + CELL_SIZE / 2;
-
-    ctx.fillStyle = dot.color;
-    ctx.beginPath();
-    ctx.arc(x, y, DOT_RADIUS, 0, 2 * Math.PI);
-    ctx.fill();
+      if (d.precise && typeof d.precise.x === "number" && typeof d.precise.y === "number") {
+        // draw at exact pixel (assume values are normalized 0..1 or pixel coords)
+        // if values look normalized (<=1), map to canvas; else treat as pixels.
+        let px = d.precise.x;
+        let py = d.precise.y;
+        if (px <= 1 && py <= 1) {
+          px = px * size;
+          py = py * size;
+        }
+        ctx.arc(px, py, DOT_RADIUS, 0, Math.PI*2);
+        ctx.fill();
+      } else {
+        // row/col grid cell center
+        const rowIndex = AXIS_Y.indexOf(String(d.row).toUpperCase());
+        const colIndex = (Number(d.col) || 1) - 1;
+        if (rowIndex < 0 || colIndex < 0 || colIndex >= GRID_N) continue;
+        const cx = (colIndex + 0.5) * cell;
+        const cy = (rowIndex + 0.5) * cell;
+        ctx.arc(cx, cy, DOT_RADIUS, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
   }
-}
 
-function render() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawGrid();
-  drawDots();
-  requestAnimationFrame(render);
-}
-render();
+  // Keep rendering every 120ms to remove expired dots and update overlay
+  setInterval(()=> {
+    const now = Date.now();
+    const prevLen = dots.length;
+    dots = dots.filter(d => d.expires > now);
+    if (dots.length !== prevLen) drawAll(); else {
+      // still redraw occasionally for new incoming events
+      //drawAll();
+    }
+  }, 120);
 
-window.addEventListener("message", e => {
-  const { row, col, color } = e.data;
-  if (!row || !col) return;
-  dots.push({
-    row,
-    col,
-    color: color || "white",
-    expires: Date.now() + DOT_DURATION
+  // Accept postMessage events (safe demo):
+  window.addEventListener('message', ev => {
+    try {
+      const d = ev.data;
+      // Accept shapes:
+      // { row: 'A', col: 3, color: 'white' }
+      // or { precise: { x: 0.45, y: 0.66 }, color: 'white' }  (x,y normalized 0..1)
+      if (!d) return;
+      if (typeof d.row === "string" && typeof d.col !== "undefined") {
+        const color = d.color || "white";
+        addDot({ row: String(d.row).toUpperCase(), col: Number(d.col), color });
+      } else if (d.precise && typeof d.precise.x === "number" && typeof d.precise.y === "number") {
+        addDot({ precise: { x: d.precise.x, y: d.precise.y }, color: d.color || "white" });
+      }
+    } catch (e) { /* ignore */ }
   });
-});
+
+  // Add dot helper
+  function addDot({ row, col, color, precise }) {
+    const expires = Date.now() + RESET_MS;
+    const id = Math.random().toString(36).slice(2,8);
+    dots.push({ id, row, col, precise, color, expires });
+    drawAll();
+  }
+
+  // Test controls
+  document.getElementById('sendTest').addEventListener('click', ()=>{
+    const row = document.getElementById('selRow').value;
+    const col = Number(document.getElementById('selCol').value);
+    const color = document.getElementById('selColor').value;
+    addDot({ row, col, color });
+  });
+  document.getElementById('clearAll').addEventListener('click', ()=>{
+    dots = []; drawAll();
+  });
+
+  // initial draw
+  drawAll();
+
+  // Expose small API for console debugging (safe)
+  window.RavenDemo = {
+    addDotByCell: (r,c,color='white') => addDot({row:r,col:c,color}),
+    addDotPrecise: (x,y,color='white') => addDot({precise:{x,y},color}),
+    clear: () => { dots = []; drawAll(); }
+  };
+
+})();
 </script>
 </body>
 </html>
