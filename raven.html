@@ -2,73 +2,43 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Raven — Grid</title>
+<title>Raven — Map</title>
 <style>
-:root { --bg:#000; --tile:#666; --label:#ddd; }
-html, body { height:100%; margin:0; font-family:Arial,Helvetica,sans-serif; }
-body { background:var(--bg); color:var(--label); display:flex; align-items:center; justify-content:center; }
-.panel { width:540px; padding:18px; background:rgba(255,255,255,0.03); border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,.5); }
-.gridWrap { display:grid; grid-template-columns:40px repeat(5,72px); grid-auto-rows:40px; gap:6px; align-items:center; }
-.corner{width:40px;height:40px;}
-.colLabel, .rowLabel{display:flex; align-items:center; justify-content:center; color:#bbb;}
-.tile { width:72px; height:72px; background:var(--tile); border-radius:6px; display:flex; align-items:center; justify-content:center; color:#111; font-weight:700; transition:background .12s; }
-.footer { position:fixed; right:12px; bottom:10px; font-size:12px; color:#ccc; }
+html, body {
+  margin: 0; padding: 0;
+  height: 100%; width: 100%;
+  background: #000;
+  overflow: hidden;
+}
+canvas {
+  display: block;
+  margin: auto;
+  background: #111;
+}
 </style>
 </head>
 <body>
-<div class="panel">
-  <div class="gridWrap" id="gridWrap">
-    <div class="corner"></div>
-    <div class="colLabel">1</div><div class="colLabel">2</div><div class="colLabel">3</div><div class="colLabel">4</div><div class="colLabel">5</div>
-
-    <div class="rowLabel">A</div><div id="A1" class="tile">A1</div><div id="A2" class="tile">A2</div><div id="A3" class="tile">A3</div><div id="A4" class="tile">A4</div><div id="A5" class="tile">A5</div>
-    <div class="rowLabel">B</div><div id="B1" class="tile">B1</div><div id="B2" class="tile">B2</div><div id="B3" class="tile">B3</div><div id="B4" class="tile">B4</div><div id="B5" class="tile">B5</div>
-    <div class="rowLabel">C</div><div id="C1" class="tile">C1</div><div id="C2" class="tile">C2</div><div id="C3" class="tile">C3</div><div id="C4" class="tile">C4</div><div id="C5" class="tile">C5</div>
-    <div class="rowLabel">D</div><div id="D1" class="tile">D1</div><div id="D2" class="tile">D2</div><div id="D3" class="tile">D3</div><div id="D4" class="tile">D4</div><div id="D5" class="tile">D5</div>
-    <div class="rowLabel">E</div><div id="E1" class="tile">E1</div><div id="E2" class="tile">E2</div><div id="E3" class="tile">E3</div><div id="E4" class="tile">E4</div><div id="E5" class="tile">E5</div>
-  </div>
-  <div class="footer">Made by Lonloy</div>
-</div>
-
+<canvas id="map" width="500" height="500"></canvas>
 <script>
+const canvas = document.getElementById('map');
+const ctx = canvas.getContext('2d');
+const DOT_SIZE = 10;
 const RESET_MS = 10000;
 
-function setTile(id, color) {
-    const el = document.getElementById(id);
-    if(!el) return;
-    el.style.background = color || '#666';
-    if(el._resetTimer) clearTimeout(el._resetTimer);
-    if(color) el._resetTimer = setTimeout(()=>{ el.style.background='#666'; }, RESET_MS);
+function drawDot(x, y) {
+  ctx.fillStyle = "white";
+  ctx.beginPath();
+  ctx.arc(x, y, DOT_SIZE/2, 0, 2 * Math.PI);
+  ctx.fill();
+  setTimeout(() => {
+    ctx.clearRect(x - DOT_SIZE, y - DOT_SIZE, DOT_SIZE*2, DOT_SIZE*2);
+  }, RESET_MS);
 }
 
-const overlay = document.createElement('canvas');
-overlay.width = 150;
-overlay.height = 150;
-overlay.style.position = 'fixed';
-overlay.style.bottom = '100px';
-overlay.style.right = '22px';
-overlay.style.pointerEvents = 'none';
-overlay.style.zIndex = 99999;
-document.body.appendChild(overlay);
-const ctx = overlay.getContext('2d');
-
-function drawOverlayTile(row, col, color='white'){
-    const cellSize = overlay.width / 5;
-    ctx.fillStyle = color;
-    ctx.fillRect((col-1)*cellSize, (row-1)*cellSize, cellSize, cellSize);
-    setTimeout(()=>{ ctx.fillStyle='#000'; ctx.fillRect((col-1)*cellSize, (row-1)*cellSize, cellSize, cellSize); }, RESET_MS);
-}
-
-window.addEventListener('message', e=>{
-    const d = e.data;
-    if(!d.row || !d.col) return;
-    const id = String(d.row).toUpperCase() + String(d.col);
-    setTile(id, d.color || 'white');
-
-    const row = d.row.charCodeAt(0) - 65 + 1; // A=1
-    const col = parseInt(d.col);
-    drawOverlayTile(row, col, d.color || 'white');
+window.addEventListener('message', e => {
+  const d = e.data;
+  if(typeof d.x !== "number" || typeof d.y !== "number") return;
+  drawDot(d.x, d.y);
 });
 </script>
 </body>
