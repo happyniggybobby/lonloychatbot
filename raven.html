@@ -5,291 +5,211 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Raven — Grid</title>
 <style>
-  :root {
-    --bg: #000;
-    --tile: #222;
-    --label: #ddd;
-    --gap: 6px;
-  }
-  html,body { height:100%; margin:0; font-family: Inter, Arial, Helvetica, sans-serif; background:var(--bg); color:var(--label); }
-  .wrap { display:flex; align-items:center; justify-content:center; height:100%; padding:18px; box-sizing:border-box; }
-  .panel { width:640px; max-width:95vw; background:rgba(255,255,255,0.03); padding:16px; border-radius:10px; box-shadow:0 8px 30px rgba(0,0,0,.6); }
-  .title { text-align:center; margin-bottom:8px; color:#ccc; font-weight:600; }
-  canvas { width:100%; height:auto; display:block; background:transparent; border-radius:6px; }
-  .footer { font-size:12px; color:#bbb; text-align:right; margin-top:8px; }
-  .controls { margin-top:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-  .controls select, .controls input { padding:6px 8px; background:#111; color:#ddd; border:1px solid #222; border-radius:6px; }
-  .controls button { padding:6px 10px; background:#1b6; color:#030; border:none; border-radius:6px; cursor:pointer; }
-  .note { color:#888; font-size:12px; margin-top:6px; }
+  :root { --bg:#000; --tile:#222; --label:#ddd; --grid:#444; }
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--label);font-family:Arial,Helvetica,sans-serif;}
+  .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;}
+  .panel{width:600px;padding:18px;background:rgba(255,255,255,0.03);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.5);}
+  canvas{display:block;width:100%;height:auto;border-radius:6px;background:#0b0b0b}
+  .controls{margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .controls select,.controls input{padding:6px;border-radius:4px;border:1px solid #333;background:#111;color:#fff}
+  .controls button{padding:6px 10px;border-radius:4px;border:none;background:#1f6feb;color:#fff;cursor:pointer}
+  .footer{position:fixed;right:12px;bottom:10px;font-size:12px;color:#ccc}
+  .small{font-size:13px;color:#bbb}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="panel">
-    <div class="title">Raven — Map (A–E / 1–5)</div>
-    <canvas id="mapCanvas" width="540" height="540" aria-label="Raven map"></canvas>
+    <canvas id="map" width="540" height="540" aria-label="Raven Grid"></canvas>
 
-    <div class="controls">
-      <label>Row:
-        <select id="selRow">
-          <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
-        </select>
+    <div class="controls" title="Test controls to simulate incoming tile events">
+      <label class="small">Row:
+        <select id="selRow"><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option></select>
       </label>
-      <label>Col:
-        <select id="selCol">
-          <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-        </select>
+      <label class="small">Col:
+        <select id="selCol"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
       </label>
-
-      <label>OffsetX (0..1): <input id="offX" type="number" min="0" max="1" step="0.01" value="0.5" style="width:68px" /></label>
-      <label>OffsetY (0..1): <input id="offY" type="number" min="0" max="1" step="0.01" value="0.5" style="width:68px" /></label>
-
-      <button id="sendTest">Send Test</button>
-      <div style="flex:1"></div>
-      <div style="color:#aaa;font-size:12px">Made by Lonloy</div>
+      <label class="small">Color:
+        <select id="selColor"><option value="white">white</option><option value="red">red</option><option value="yellow">yellow</option><option value="green">green</option></select>
+      </label>
+      <button id="sendTest">Send to grid</button>
+      <button id="clearAll">Clear</button>
+      <div class="small" style="margin-left:auto">Made by Lonloy</div>
     </div>
-
-    <div class="note">This page only visualizes events you explicitly send (via postMessage or a local WebSocket). It contains no game-intercepting or stealth code.</div>
-    <div class="footer"></div>
   </div>
 </div>
+<div class="footer">Test-only demo • accepts window.postMessage({row:'A',col:1,color:'white'})</div>
 
 <script>
-/*
-  raven.html
-  - Accepts messages in either form:
-    { row: "A", col: 3, offsetX: 0.2, offsetY: 0.7 }  // offsetX/Y optional 0..1 inside tile (0 left/top, 1 right/bottom)
-  OR
-    { normX: 0.5, normY: 0.4 } // normalized coords across entire 5x5 grid (0..1)
-  OR
-    { x: <canvas px>, y: <canvas px> } // direct canvas pixels
+(function(){
+  const canvas = document.getElementById('map');
+  const ctx = canvas.getContext('2d');
 
-  - Each dot is white, lasts DOT_TTL ms.
-  - Grid mapping: top row = A, leftmost col = 1
-*/
+  // Grid config
+  const GRID_N = 5;
+  const AXIS_Y = ['A','B','C','D','E']; // A top -> E bottom
+  const RESET_MS = 10000; // ms to keep dots
+  const DOT_RADIUS = 12;
 
-const canvas = document.getElementById('mapCanvas');
-const ctx = canvas.getContext('2d', { alpha: false });
+  // Keep dots as {id, row, col, color, expires, precise?:{x,y}}
+  let dots = [];
 
-const ROWS = 5, COLS = 5;
-const DOT_TTL = 10000; // 10s
-const DOT_RADIUS = 8; // px
-const PADDING = 20; // px around the grid for labels
-const GAP = 6; // gap between cells in px (visual)
-const LABEL_FONT = 'bold 14px Arial';
-const LABEL_COLOR = '#ccc';
-const GRID_BG = '#111';
-const CELL_BG = '#222';
-const LINE_COLOR = '#333';
-
-// store active dots as {x,y,expires}
-let dots = [];
-
-// normalize for high-dpi displays:
-function resizeCanvasToDisplaySize() {
-  const ratio = window.devicePixelRatio || 1;
-  const cssW = canvas.clientWidth || canvas.width;
-  const cssH = canvas.clientHeight || canvas.height;
-  if (canvas.width !== Math.floor(cssW * ratio) || canvas.height !== Math.floor(cssH * ratio)) {
-    canvas.width = Math.floor(cssW * ratio);
-    canvas.height = Math.floor(cssH * ratio);
-    ctx.setTransform(ratio,0,0,ratio,0,0);
+  function fitCanvas() {
+    // Canvas is fixed pixel size but styled responsive; use its internal resolution for crisp drawing
+    const rect = canvas.getBoundingClientRect();
+    const DPR = window.devicePixelRatio || 1;
+    canvas.width = rect.width * DPR;
+    canvas.height = rect.width * DPR; // keep square
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    drawAll();
   }
-}
-function getGridLayout() {
-  // compute grid cell size based on canvas actual css width (no DPR)
-  const w = canvas.clientWidth || canvas.width;
-  const h = canvas.clientHeight || canvas.height;
-  // available area inside padding
-  const availW = w - PADDING*2 - (COLS-1)*GAP;
-  const availH = h - PADDING*2 - (ROWS-1)*GAP;
-  const cellW = Math.floor(availW / COLS);
-  const cellH = Math.floor(availH / ROWS);
-  const gridW = cellW * COLS + (COLS-1)*GAP;
-  const gridH = cellH * ROWS + (ROWS-1)*GAP;
-  const left = (w - gridW)/2;
-  const top = (h - gridH)/2;
-  return { w, h, cellW, cellH, gridW, gridH, left, top };
-}
 
-// draw static grid and labels
-function drawBase() {
-  resizeCanvasToDisplaySize();
-  ctx.fillStyle = GRID_BG;
-  ctx.fillRect(0,0,canvas.clientWidth, canvas.clientHeight);
+  window.addEventListener('resize', fitCanvas);
+  fitCanvas();
 
-  const L = getGridLayout();
-  // draw cells
-  for(let r=0;r<ROWS;r++){
-    for(let c=0;c<COLS;c++){
-      const x = L.left + c*(L.cellW + GAP);
-      const y = L.top + r*(L.cellH + GAP);
-      ctx.fillStyle = CELL_BG;
-      roundRect(ctx, x, y, L.cellW, L.cellH, 8);
-      ctx.fill();
+  function cellSize() {
+    return canvas.width / GRID_N / (window.devicePixelRatio || 1);
+  }
 
-      // draw tile label (small, optional)
-      ctx.fillStyle = '#777';
-      ctx.font = '600 12px Arial';
-      //ctx.fillText(String.fromCharCode(65+r) + (c+1), x + 8, y + 18);
+  function drawGrid() {
+    const c = canvas;
+    const size = c.width / (window.devicePixelRatio || 1);
+    const cell = size / GRID_N;
+    ctx.clearRect(0,0,size,size);
+
+    // background
+    ctx.fillStyle = '#0b0b0b';
+    ctx.fillRect(0,0,size,size);
+
+    // grid lines
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = 1;
+    for(let i=0;i<=GRID_N;i++){
+      // vertical
+      ctx.beginPath();
+      ctx.moveTo(i*cell + 0.5, 0.5);
+      ctx.lineTo(i*cell + 0.5, size + 0.5);
+      ctx.stroke();
+      // horizontal
+      ctx.beginPath();
+      ctx.moveTo(0.5, i*cell + 0.5);
+      ctx.lineTo(size + 0.5, i*cell + 0.5);
+      ctx.stroke();
+    }
+
+    // labels (rows left; cols top)
+    ctx.fillStyle = "#ddd";
+    ctx.font = Math.max(12, Math.floor(cell*0.18)) + "px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // top column numbers
+    for(let i=0;i<GRID_N;i++){
+      const x = (i + 0.5) * cell;
+      ctx.fillText(String(i+1), x, cell*0.12);
+    }
+
+    // left row letters
+    for(let r=0;r<GRID_N;r++){
+      const y = (r + 0.5) * cell;
+      ctx.fillText(AXIS_Y[r], cell*0.12, y);
     }
   }
 
-  // draw grid thin lines
-  ctx.strokeStyle = LINE_COLOR;
-  ctx.lineWidth = 1;
-  for(let r=0;r<=ROWS;r++){
-    const y = L.top + r*(L.cellH + GAP) - (r===ROWS? -GAP : 0);
-    // horizontal lines: draw between cells
+  function drawAll() {
+    drawGrid();
+    const size = canvas.width / (window.devicePixelRatio || 1);
+    const cell = size / GRID_N;
+    // draw dots (keep order newest last)
+    const now = Date.now();
+    for (let i = 0; i < dots.length; i++) {
+      const d = dots[i];
+      if (d.expires <= now) continue;
+      ctx.beginPath();
+      ctx.fillStyle = d.color || "white";
+
+      if (d.precise && typeof d.precise.x === "number" && typeof d.precise.y === "number") {
+        // draw at exact pixel (assume values are normalized 0..1 or pixel coords)
+        // if values look normalized (<=1), map to canvas; else treat as pixels.
+        let px = d.precise.x;
+        let py = d.precise.y;
+        if (px <= 1 && py <= 1) {
+          px = px * size;
+          py = py * size;
+        }
+        ctx.arc(px, py, DOT_RADIUS, 0, Math.PI*2);
+        ctx.fill();
+      } else {
+        // row/col grid cell center
+        const rowIndex = AXIS_Y.indexOf(String(d.row).toUpperCase());
+        const colIndex = (Number(d.col) || 1) - 1;
+        if (rowIndex < 0 || colIndex < 0 || colIndex >= GRID_N) continue;
+        const cx = (colIndex + 0.5) * cell;
+        const cy = (rowIndex + 0.5) * cell;
+        ctx.arc(cx, cy, DOT_RADIUS, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
   }
-  // labels top (1..5)
-  ctx.fillStyle = LABEL_COLOR;
-  ctx.font = LABEL_FONT;
-  for(let c=0;c<COLS;c++){
-    const x = L.left + c*(L.cellW + GAP) + L.cellW/2;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText(String(c+1), x, L.top - 6);
+
+  // Keep rendering every 120ms to remove expired dots and update overlay
+  setInterval(()=> {
+    const now = Date.now();
+    const prevLen = dots.length;
+    dots = dots.filter(d => d.expires > now);
+    if (dots.length !== prevLen) drawAll(); else {
+      // still redraw occasionally for new incoming events
+      //drawAll();
+    }
+  }, 120);
+
+  // Accept postMessage events (safe demo):
+  window.addEventListener('message', ev => {
+    try {
+      const d = ev.data;
+      // Accept shapes:
+      // { row: 'A', col: 3, color: 'white' }
+      // or { precise: { x: 0.45, y: 0.66 }, color: 'white' }  (x,y normalized 0..1)
+      if (!d) return;
+      if (typeof d.row === "string" && typeof d.col !== "undefined") {
+        const color = d.color || "white";
+        addDot({ row: String(d.row).toUpperCase(), col: Number(d.col), color });
+      } else if (d.precise && typeof d.precise.x === "number" && typeof d.precise.y === "number") {
+        addDot({ precise: { x: d.precise.x, y: d.precise.y }, color: d.color || "white" });
+      }
+    } catch (e) { /* ignore */ }
+  });
+
+  // Add dot helper
+  function addDot({ row, col, color, precise }) {
+    const expires = Date.now() + RESET_MS;
+    const id = Math.random().toString(36).slice(2,8);
+    dots.push({ id, row, col, precise, color, expires });
+    drawAll();
   }
-  // labels left (A..E)
-  for(let r=0;r<ROWS;r++){
-    const y = L.top + r*(L.cellH + GAP) + L.cellH/2;
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(String.fromCharCode(65+r), L.left - 10, y);
-  }
-}
 
-// helper: rounded rect
-function roundRect(ctx, x, y, w, h, r) {
-  const rad = Math.min(r, h/2, w/2);
-  ctx.beginPath();
-  ctx.moveTo(x+rad, y);
-  ctx.arcTo(x+w, y, x+w, y+h, rad);
-  ctx.arcTo(x+w, y+h, x, y+h, rad);
-  ctx.arcTo(x, y+h, x, y, rad);
-  ctx.arcTo(x, y, x+w, y, rad);
-  ctx.closePath();
-}
+  // Test controls
+  document.getElementById('sendTest').addEventListener('click', ()=>{
+    const row = document.getElementById('selRow').value;
+    const col = Number(document.getElementById('selCol').value);
+    const color = document.getElementById('selColor').value;
+    addDot({ row, col, color });
+  });
+  document.getElementById('clearAll').addEventListener('click', ()=>{
+    dots = []; drawAll();
+  });
 
-function tileToCellCenter(rowChar, colNum) {
-  const row = String(rowChar||'A').toUpperCase().charCodeAt(0) - 65; // 0..4
-  const col = Number(colNum) - 1; // 0..4
-  const L = getGridLayout();
-  const x = L.left + col*(L.cellW + GAP) + L.cellW/2;
-  const y = L.top + row*(L.cellH + GAP) + L.cellH/2;
-  return { x, y, cellW: L.cellW, cellH: L.cellH, left: L.left, top: L.top };
-}
-function tileTopLeft(rowChar, colNum){
-  const row = String(rowChar||'A').toUpperCase().charCodeAt(0) - 65;
-  const col = Number(colNum) - 1;
-  const L = getGridLayout();
-  const x = L.left + col*(L.cellW + GAP);
-  const y = L.top + row*(L.cellH + GAP);
-  return { x, y, cellW: L.cellW, cellH: L.cellH };
-}
+  // initial draw
+  drawAll();
 
-function addDotAtCanvas(x,y) {
-  const expires = Date.now() + DOT_TTL;
-  dots.push({ x, y, expires });
-}
-function addDotAtTile(row, col, offsetX=0.5, offsetY=0.5) {
-  const t = tileToCellCenter(row, col);
-  const topLeft = tileTopLeft(row,col);
-  const x = topLeft.x + Math.max(0, Math.min(1, offsetX)) * t.cellW;
-  const y = topLeft.y + Math.max(0, Math.min(1, offsetY)) * t.cellH;
-  addDotAtCanvas(x,y);
-}
+  // Expose small API for console debugging (safe)
+  window.RavenDemo = {
+    addDotByCell: (r,c,color='white') => addDot({row:r,col:c,color}),
+    addDotPrecise: (x,y,color='white') => addDot({precise:{x,y},color}),
+    clear: () => { dots = []; drawAll(); }
+  };
 
-// handle incoming messages (postMessage or websocket JSON)
-function handleIncoming(msg) {
-  if (!msg) return;
-  // accept {row,col,offsetX,offsetY}
-  if (msg.row && msg.col) {
-    addDotAtTile(msg.row, msg.col, msg.offsetX ?? 0.5, msg.offsetY ?? 0.5);
-    return;
-  }
-  // accept normalized coords {normX, normY} 0..1 over whole grid
-  if (typeof msg.normX === 'number' && typeof msg.normY === 'number') {
-    const L = getGridLayout();
-    const x = L.left + Math.max(0, Math.min(1,msg.normX)) * L.gridW;
-    const y = L.top  + Math.max(0, Math.min(1,msg.normY)) * L.gridH;
-    addDotAtCanvas(x,y);
-    return;
-  }
-  // accept direct canvas pixel coords {x,y}
-  if (typeof msg.x === 'number' && typeof msg.y === 'number') {
-    addDotAtCanvas(msg.x, msg.y);
-  }
-}
-
-// animation loop: redraw base + dots
-function render() {
-  resizeCanvasToDisplaySize();
-  // clear
-  ctx.clearRect(0,0,canvas.clientWidth, canvas.clientHeight);
-  drawBase();
-
-  // draw dots
-  const now = Date.now();
-  dots = dots.filter(d => d.expires > now);
-  for(const d of dots) {
-    // fade near expiry
-    const t = 1 - (d.expires - now)/DOT_TTL;
-    const alpha = 1 - Math.min(0.9, t); // fade slightly
-    ctx.beginPath();
-    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-    ctx.arc(d.x, d.y, DOT_RADIUS, 0, Math.PI*2);
-    ctx.fill();
-    // optional small halo
-    ctx.beginPath();
-    ctx.fillStyle = `rgba(255,255,255,${alpha*0.12})`;
-    ctx.arc(d.x, d.y, DOT_RADIUS*2.6, 0, Math.PI*2);
-    ctx.fill();
-  }
-  requestAnimationFrame(render);
-}
-requestAnimationFrame(render);
-
-// listen for postMessage
-window.addEventListener('message', ev => {
-  try {
-    const d = ev.data;
-    handleIncoming(d);
-  } catch (e) {
-    // ignore
-  }
-}, false);
-
-// optional: local websocket (connects only to ws://localhost:8080)
-let ws;
-function tryConnectWs() {
-  try {
-    ws = new WebSocket('ws://localhost:8080');
-    ws.addEventListener('open', () => console.log('Raven: connected to ws://localhost:8080'));
-    ws.addEventListener('message', e => {
-      try {
-        const data = typeof e.data === 'string' ? JSON.parse(e.data) : JSON.parse(new TextDecoder().decode(e.data));
-        handleIncoming(data);
-      } catch (err) { /* ignore */ }
-    });
-    ws.addEventListener('error', () => { /* ignore */ });
-    ws.addEventListener('close', () => { setTimeout(tryConnectWs, 2000); });
-  } catch (err) { /* ignore */ }
-}
-// uncomment next line if you run a local test server
-// tryConnectWs();
-
-// small UI: send test
-document.getElementById('sendTest').addEventListener('click', ()=>{
-  const row = document.getElementById('selRow').value;
-  const col = document.getElementById('selCol').value;
-  const offX = parseFloat(document.getElementById('offX').value) || 0.5;
-  const offY = parseFloat(document.getElementById('offY').value) || 0.5;
-  // postMessage to same window (will be handled)
-  window.postMessage({ row, col: Number(col), offsetX: offX, offsetY: offY }, '*');
-});
-
+})();
 </script>
 </body>
 </html>
