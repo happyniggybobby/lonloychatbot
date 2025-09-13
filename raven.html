@@ -1,87 +1,184 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Raven — Map</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Raven — Viewer (safe test)</title>
 <style>
-html, body {
-  margin: 0; padding: 0;
-  height: 100%; width: 100%;
-  background: #000;
-  overflow: hidden;
-  font-family: sans-serif;
-}
-canvas {
-  display: block;
-  margin: auto;
-  background: #111;
-  border: 1px solid #555;
-}
-.grid-label {
-  position: absolute;
-  color: #888;
-  font-size: 14px;
-  pointer-events: none;
-}
+  :root { --bg:#000; --tile:#222; --label:#ccc; }
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--label);font-family:Arial,Helvetica,sans-serif;display:flex;align-items:center;justify-content:center}
+  .panel{width:560px;padding:18px;background:rgba(255,255,255,0.03);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.5)}
+  canvas{display:block;background:#111;border-radius:6px;box-shadow:inset 0 0 0 1px #222}
+  .controls{margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{padding:6px 10px;border-radius:6px;border:1px solid #333;background:#151515;color:#ddd;cursor:pointer}
+  .help{color:#9aa;margin-top:8px;font-size:13px}
+  .footer{position:fixed;right:12px;bottom:10px;font-size:12px;color:#777}
 </style>
 </head>
 <body>
-<canvas id="map" width="500" height="500"></canvas>
+  <div class="panel">
+    <canvas id="map" width="500" height="500"></canvas>
+
+    <div class="controls">
+      <button id="t1">Test tile A3</button>
+      <button id="t2">Test world x/y center (worldSize=450)</button>
+      <button id="clear">Clear dots</button>
+      <div class="help">Use the test buttons OR open browser console and run the sample `postMessage` commands shown below.</div>
+    </div>
+  </div>
+
+  <div class="footer">Made by Lonloy — viewer only (no game traffic decoding)</div>
+
 <script>
-const canvas = document.getElementById('map');
-const ctx = canvas.getContext('2d');
-const DOT_SIZE = 10;
-const RESET_MS = 10000;
+(function(){
+  const canvas = document.getElementById('map');
+  const ctx = canvas.getContext('2d');
+  const WIDTH = canvas.width;
+  const HEIGHT = canvas.height;
+  const CELLS = 5;
+  const RESET_MS = 10000; // 10 seconds
+  const DOT_RADIUS = 8;
+  const AXIS_Y = ['A','B','C','D','E']; // top -> bottom
+  const AXIS_X = [1,2,3,4,5];
 
-// Draw grid (5x5 labels)
-const AXIS_Y = ['A','B','C','D','E'];
-const AXIS_X = [1,2,3,4,5];
-
-function drawGrid() {
-    ctx.strokeStyle = '#333';
+  // Draw grid (background + labels)
+  function drawGrid(){
+    ctx.clearRect(0,0,WIDTH,HEIGHT);
+    // background
+    ctx.fillStyle = '#111';
+    ctx.fillRect(0,0,WIDTH,HEIGHT);
+    // grid lines
+    ctx.strokeStyle = '#2b2b2b';
     ctx.lineWidth = 1;
-    const step = canvas.width / 5;
-    for(let i=1;i<5;i++){
-        // vertical lines
-        ctx.beginPath();
-        ctx.moveTo(i*step,0);
-        ctx.lineTo(i*step,canvas.height);
-        ctx.stroke();
-        // horizontal lines
-        ctx.beginPath();
-        ctx.moveTo(0,i*step);
-        ctx.lineTo(canvas.width,i*step);
-        ctx.stroke();
+    const stepX = WIDTH / CELLS;
+    const stepY = HEIGHT / CELLS;
+    for(let i=1;i<CELLS;i++){
+      // vertical
+      ctx.beginPath();
+      ctx.moveTo(i*stepX,0);
+      ctx.lineTo(i*stepX,HEIGHT);
+      ctx.stroke();
+      // horizontal
+      ctx.beginPath();
+      ctx.moveTo(0,i*stepY);
+      ctx.lineTo(WIDTH,i*stepY);
+      ctx.stroke();
     }
-    // labels
+    // labels: columns (top)
     ctx.fillStyle = '#888';
     ctx.font = '14px sans-serif';
-    for(let i=0;i<5;i++){
-        ctx.fillText(AXIS_Y[i],5,i*step + 15);
-        ctx.fillText(AXIS_X[i],i*step + 5,canvas.height - 5);
+    ctx.textBaseline = 'top';
+    for(let i=0;i<CELLS;i++){
+      ctx.fillText(AXIS_X[i], i*stepX + 6, 6);
     }
-}
-drawGrid();
+    // labels: rows (left) A..E top->bottom
+    ctx.textBaseline = 'middle';
+    for(let j=0;j<CELLS;j++){
+      ctx.fillText(AXIS_Y[j], 6, j*stepY + stepY/2);
+    }
+  }
 
-function drawDot(x, y, color="white") {
-    ctx.fillStyle = color;
+  drawGrid();
+
+  // Keep track of active dot timers so we can clear individually
+  const activeTimers = new Map();
+
+  function clearDotAtPixel(x,y){
+    // clear small area and redraw grid section (simple approach: redraw whole grid)
+    drawGrid();
+    // Note: for more complex app you'd redraw dots under a retained list instead.
+  }
+
+  function drawDotAtPixel(x,y,color='white'){
+    // Draw a filled circle
     ctx.beginPath();
-    ctx.arc(x, y, DOT_SIZE/2, 0, 2 * Math.PI);
+    ctx.fillStyle = color;
+    ctx.arc(x, y, DOT_RADIUS, 0, 2*Math.PI);
     ctx.fill();
-    setTimeout(() => {
-        ctx.clearRect(x - DOT_SIZE, y - DOT_SIZE, DOT_SIZE*2, DOT_SIZE*2);
-        drawGrid(); // redraw grid after clearing
-    }, RESET_MS);
-}
+  }
 
-// Listen for Tampermonkey messages
-window.addEventListener('message', e => {
-    const d = e.data;
-    if(d.x !== undefined && d.y !== undefined) {
-        drawDot(d.x, d.y, d.color || 'white');
+  // Convert row/col to pixel center
+  function tileCenterFromRowCol(row, col){
+    const colIndex = Number(col) - 1;
+    const rowIndex = AXIS_Y.indexOf(String(row).toUpperCase());
+    if(colIndex < 0 || colIndex >= CELLS || rowIndex < 0 || rowIndex >= CELLS) return null;
+    const stepX = WIDTH / CELLS;
+    const stepY = HEIGHT / CELLS;
+    const cx = colIndex * stepX + stepX/2;
+    const cy = rowIndex * stepY + stepY/2;
+    return {x: cx, y: cy};
+  }
+
+  // Convert world x,y to pixel, flipping Y so A is top (as discussed)
+  function pixelFromWorldXY(x,y,worldSize){
+    // clamp and normalize
+    if(typeof worldSize !== 'number' || worldSize <= 0) worldSize = Math.max(WIDTH, HEIGHT);
+    const nx = Math.max(0, Math.min(1, x / worldSize));
+    const ny = Math.max(0, Math.min(1, y / worldSize));
+    // flip Y: world y=0 -> bottom, we want A(top) when ny small => flip
+    const px = nx * WIDTH;
+    const py = (1 - ny) * HEIGHT; // flipped so that higher y (world) maps lower on canvas
+    return {x: px, y: py};
+  }
+
+  // Public handler: accepts either {row, col, color} OR {x, y, worldSize, color}
+  function handleIncoming(msg){
+    try {
+      if(!msg) return;
+      // If row/col provided -> tile center
+      if(msg.row && msg.col){
+        const center = tileCenterFromRowCol(msg.row, msg.col);
+        if(!center) { console.warn('Invalid row/col', msg); return; }
+        drawDotAtPixel(center.x, center.y, msg.color || 'white');
+        // auto clear
+        const key = `${msg.row}${msg.col}`;
+        if(activeTimers.has(key)) clearTimeout(activeTimers.get(key));
+        activeTimers.set(key, setTimeout(()=>{ drawGrid(); activeTimers.delete(key); }, RESET_MS));
+        return;
+      }
+      // If world x/y provided -> map to pixel
+      if(typeof msg.x === 'number' && typeof msg.y === 'number'){
+        const p = pixelFromWorldXY(msg.x, msg.y, msg.worldSize || Math.max(WIDTH,HEIGHT));
+        drawDotAtPixel(p.x, p.y, msg.color || 'white');
+        // simple timeout: clear whole grid after RESET_MS (keeps viewer simple)
+        setTimeout(()=>{ drawGrid(); }, RESET_MS);
+        return;
+      }
+      console.warn('Unknown message shape:', msg);
+    } catch(err){
+      console.error('handleIncoming error', err);
     }
-});
+  }
+
+  // Listen for safe postMessage (testing). Only accept messages shaped as above.
+  window.addEventListener('message', ev=>{
+    // This demo accepts messages from any origin so you can test easily.
+    // In production you should check ev.origin and ensure messages come from a trusted source.
+    handleIncoming(ev.data);
+  }, false);
+
+  // Test UI (buttons)
+  document.getElementById('t1').addEventListener('click', ()=>{
+    // A3
+    window.postMessage({row:'A', col:3, color:'white'}, '*');
+  });
+  document.getElementById('t2').addEventListener('click', ()=>{
+    // world center for worldSize=450
+    window.postMessage({x:225, y:225, worldSize:450, color:'white'}, '*');
+  });
+  document.getElementById('clear').addEventListener('click', ()=>{
+    drawGrid();
+  });
+
+  // Expose small helper in console for manual testing:
+  window.__ravenTest = {
+    sendRowCol: (r,c,color='white') => window.postMessage({row:r,col:c,color:color}, '*'),
+    sendXY: (x,y,worldSize=450,color='white') => window.postMessage({x:x,y:y,worldSize:worldSize,color:color}, '*')
+  };
+
+  // For initial visual grid draw
+  drawGrid();
+})();
 </script>
 </body>
 </html>
-
